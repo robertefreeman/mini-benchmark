@@ -1,0 +1,21 @@
+{
+  "source_url": "https://openai.com/api/pricing/",
+  "captured_at": "2026-03-19",
+  "models": {
+    "gpt-5.4": {
+      "aliases": [],
+      "input_per_million_usd": 2.5,
+      "cached_input_per_million_usd": 0.25,
+      "output_per_million_usd": 15.0
+    },
+    "gpt-5.4-mini": {
+      "aliases": [
+        "gpt-5-mini"
+      ],
+      "input_per_million_usd": 0.25,
+      "cached_input_per_million_usd": 0.025,
+      "output_per_million_usd": 2.0
+    }
+  }
+}
+

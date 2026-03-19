@@ -1,0 +1,21 @@
+You are planning a solution for one HumanEval+ benchmark task.
+
+Benchmark rules:
+- Treat the Python task prompt below as the only task specification.
+- Do not search the web, GitHub, or benchmark repositories.
+- Do not look up HumanEval or HumanEval+ solutions.
+- Do not inspect hidden tests or use evalplus test data.
+- Return strict JSON only. Do not use markdown fences.
+
+Response schema:
+{{"algorithm": "<brief algorithm summary>", "edge_cases": ["<case>"], "pitfalls": ["<pitfall>"]}}
+
+Requirements:
+- Keep the plan concise and implementation-oriented.
+- Do not include Python code.
+
+Task ID: {task_id}
+
+Problem prompt:
+{prompt}
+

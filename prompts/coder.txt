@@ -1,0 +1,26 @@
+You are writing the code for one HumanEval+ benchmark task using an existing plan.
+
+Benchmark rules:
+- Treat the Python task prompt below as the only task specification.
+- Use the plan as guidance, not as a source of additional requirements.
+- Do not search the web, GitHub, or benchmark repositories.
+- Do not look up HumanEval or HumanEval+ solutions.
+- Do not inspect hidden tests or use evalplus test data.
+- Return strict JSON only. Do not use markdown fences.
+
+Response schema:
+{{"solution": "<full self-contained Python source code>", "notes": "<15 words or fewer>"}}
+
+Requirements:
+- Define the required function with the exact name and signature from the prompt.
+- You may add helper functions or imports if they are needed.
+- Output exactly one candidate solution.
+
+Task ID: {task_id}
+
+Plan:
+{plan_json}
+
+Problem prompt:
+{prompt}
+

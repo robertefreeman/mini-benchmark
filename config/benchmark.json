@@ -1,0 +1,105 @@
+{
+  "benchmark": {
+    "dataset": "humaneval",
+    "evalplus_version": "0.3.1",
+    "humaneval_plus_dataset_version": "v0.1.10",
+    "pricing_source_url": "https://openai.com/api/pricing/",
+    "pricing_captured_at": "2026-03-19",
+    "max_parallel_workers": 6,
+    "remote_root": "$HOME/mini-benchmark",
+    "copilot_bin": "$HOME/.local/bin/copilot",
+    "common_copilot_args": [
+      "--allow-all",
+      "--no-ask-user",
+      "--no-custom-instructions",
+      "--output-format",
+      "json",
+      "--stream",
+      "off",
+      "--log-level",
+      "debug"
+    ]
+  },
+  "fairness_rules": [
+    "Use one full HumanEval+ pass per scenario.",
+    "Use the HumanEval prompt only; do not inspect hidden tests or benchmark solutions.",
+    "Use the same Copilot CLI harness defaults and command-line flags across both scenarios.",
+    "Never reuse one problem session for a different HumanEval+ task.",
+    "Measure runtime as wall-clock time from scenario start to scenario end.",
+    "Limit any parallel agent or subagent workflow to at most 6 concurrent workers."
+  ],
+  "scenarios": [
+    {
+      "id": "gpt-5.4-plan-code",
+      "display_name": "GPT-5.4 plan + code",
+      "server": "muntz",
+      "submission_stage": "code",
+      "stages": [
+        {
+          "name": "plan",
+          "model": "gpt-5.4",
+          "reasoning_effort": "medium",
+          "prompt_template": "planner.txt"
+        },
+        {
+          "name": "code",
+          "model": "gpt-5.4",
+          "reasoning_effort": "medium",
+          "prompt_template": "coder.txt"
+        }
+      ]
+    },
+    {
+      "id": "gpt-5.4-plan-gpt-5.4-mini-code",
+      "display_name": "GPT-5.4 plan + GPT-5.4-mini code",
+      "server": "griswold",
+      "submission_stage": "code",
+      "stages": [
+        {
+          "name": "plan",
+          "model": "gpt-5.4",
+          "reasoning_effort": "high",
+          "prompt_template": "planner.txt"
+        },
+        {
+          "name": "code",
+          "model": "gpt-5.4-mini",
+          "reasoning_effort": "xhigh",
+          "prompt_template": "coder.txt"
+        }
+      ]
+    },
+    {
+      "id": "gpt-5.4-plan-gpt-5.4-mini-code-review-fix",
+      "display_name": "GPT-5.4 plan + GPT-5.4-mini code + GPT-5.4 review + GPT-5.4-mini fix",
+      "server": "griswold",
+      "submission_stage": "fix",
+      "stages": [
+        {
+          "name": "plan",
+          "model": "gpt-5.4",
+          "reasoning_effort": "high",
+          "prompt_template": "planner.txt"
+        },
+        {
+          "name": "code",
+          "model": "gpt-5.4-mini",
+          "reasoning_effort": "xhigh",
+          "prompt_template": "coder.txt"
+        },
+        {
+          "name": "review",
+          "model": "gpt-5.4",
+          "reasoning_effort": "high",
+          "prompt_template": "reviewer.txt"
+        },
+        {
+          "name": "fix",
+          "model": "gpt-5.4-mini",
+          "reasoning_effort": "xhigh",
+          "prompt_template": "fixer.txt"
+        }
+      ]
+    }
+  ]
+}

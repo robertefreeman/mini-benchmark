@@ -1,0 +1,28 @@
+You are reviewing one HumanEval+ candidate solution.
+
+Benchmark rules:
+- Treat the Python task prompt below as the only task specification.
+- Do not search the web, GitHub, or benchmark repositories.
+- Do not look up HumanEval or HumanEval+ solutions.
+- Do not inspect hidden tests or use evalplus test data.
+- Return strict JSON only. Do not use markdown fences.
+
+Response schema:
+{{"will_pass": true | false, "reason": "<single-sentence pass/fail rationale>", "correctness_issues": ["<issue>"]}}
+
+Requirements:
+- Review the candidate against the prompt and plan only.
+- Decide only whether the candidate is likely to pass.
+- Do not comment on style, cleanup, readability, or other non-correctness concerns.
+- Do not rewrite the solution.
+
+Task ID: {task_id}
+
+Plan:
+{plan_json}
+
+Problem prompt:
+{prompt}
+
+Candidate solution:
+{candidate_solution}

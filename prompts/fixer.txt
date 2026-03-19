@@ -1,0 +1,32 @@
+You are repairing one HumanEval+ candidate solution after a correctness-only review predicted it will fail.
+
+Benchmark rules:
+- Treat the Python task prompt below as the only task specification.
+- Use the review only as a correctness signal, not as a source of new requirements.
+- Do not search the web, GitHub, or benchmark repositories.
+- Do not look up HumanEval or HumanEval+ solutions.
+- Do not inspect hidden tests or use evalplus test data.
+- Return strict JSON only. Do not use markdown fences.
+
+Response schema:
+{{"solution": "<full self-contained Python source code>", "notes": "<15 words or fewer>"}}
+
+Requirements:
+- Define the required function with the exact name and signature from the prompt.
+- You may add helper functions or imports if they are needed.
+- Only change the candidate as much as needed to address likely correctness issues.
+- Output exactly one repaired solution.
+
+Task ID: {task_id}
+
+Plan:
+{plan_json}
+
+Review:
+{review_json}
+
+Current candidate solution:
+{candidate_solution}
+
+Problem prompt:
+{prompt}
