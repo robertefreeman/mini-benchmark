@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import shutil
 import socket
 import subprocess
 import time
@@ -70,7 +71,10 @@ def _task_slug(task_id: str) -> str:
 def _evaluate_samples(samples_path: Path, output_path: Path, log_path: Path) -> dict[str, Any]:
     _, _, evalplus_evaluate = _load_evalplus()
     with log_path.open("w", encoding="utf-8") as handle, redirect_stdout(handle), redirect_stderr(handle):
-        evalplus_evaluate(dataset="humaneval", samples=str(samples_path), output_file=str(output_path))
+        evalplus_evaluate(dataset="humaneval", samples=str(samples_path))
+    evalplus_output_path = Path(str(samples_path).replace(".jsonl", "_eval_results.json"))
+    if evalplus_output_path != output_path:
+        shutil.copyfile(evalplus_output_path, output_path)
     return json.loads(output_path.read_text(encoding="utf-8"))
 
 
