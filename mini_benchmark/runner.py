@@ -7,9 +7,11 @@ import shutil
 import socket
 import subprocess
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
-from typing import Any
+from threading import Lock
+from typing import Any, Callable
 
 from .config import REPO_ROOT, BenchmarkConfig, ScenarioConfig, StageConfig, load_benchmark_config
 from .copilot_runner import (
@@ -78,6 +80,13 @@ def _evaluate_samples(samples_path: Path, output_path: Path, log_path: Path) -> 
     return json.loads(output_path.read_text(encoding="utf-8"))
 
 
+def _task_passed_eval(task_results: list[dict[str, Any]]) -> bool:
+    first = task_results[0]
+    base_ok = str(first.get("base_status", "")).lower() == "pass"
+    plus_ok = str(first.get("plus_status", "")).lower() == "pass"
+    return base_ok and plus_ok
+
+
 def _summarize_eval(eval_results: dict[str, Any]) -> dict[str, Any]:
     per_task = eval_results["eval"]
     correct = 0
@@ -85,10 +94,7 @@ def _summarize_eval(eval_results: dict[str, Any]) -> dict[str, Any]:
     passed_task_ids: list[str] = []
 
     for task_id, task_results in per_task.items():
-        first = task_results[0]
-        base_ok = str(first.get("base_status", "")).lower() == "pass"
-        plus_ok = str(first.get("plus_status", "")).lower() == "pass"
-        if base_ok and plus_ok:
+        if _task_passed_eval(task_results):
             correct += 1
             passed_task_ids.append(task_id)
 
@@ -161,6 +167,25 @@ def _build_stage_prompt(
             plan_json=stage_outputs["plan"],
             candidate_solution=stage_outputs["code"]["solution"],
         )
+    if stage.name == "repair_plan":
+        return render_prompt(
+            stage.prompt_template,
+            task_id=problem["task_id"],
+            prompt=problem["prompt"],
+            plan_json=stage_outputs["plan"],
+            eval_failure_json=stage_outputs["eval_failure"],
+            candidate_solution=stage_outputs["code"]["solution"],
+        )
+    if stage.name == "fix" and "repair_plan" in stage_outputs:
+        return render_prompt(
+            stage.prompt_template,
+            task_id=problem["task_id"],
+            prompt=problem["prompt"],
+            plan_json=stage_outputs["plan"],
+            repair_plan_json=stage_outputs["repair_plan"],
+            eval_failure_json=stage_outputs["eval_failure"],
+            candidate_solution=stage_outputs["code"]["solution"],
+        )
     if stage.name == "fix":
         return render_prompt(
             stage.prompt_template,
@@ -174,7 +199,7 @@ def _build_stage_prompt(
 
 
 def _parse_stage_output(stage_name: str, response_text: str) -> dict[str, Any]:
-    if stage_name == "plan":
+    if stage_name in {"plan", "repair_plan"}:
         return parse_plan_response(response_text)
     if stage_name in {"code", "fix"}:
         return parse_solution_response(response_text)
@@ -186,6 +211,8 @@ def _parse_stage_output(stage_name: str, response_text: str) -> dict[str, Any]:
 def _should_run_stage(stage: StageConfig, stage_outputs: dict[str, dict[str, Any]]) -> bool:
     if stage.name != "fix":
         return True
+    if "repair_plan" in stage_outputs:
+        return True
     review = stage_outputs.get("review")
     return bool(review) and not review.get("will_pass", False)
 
@@ -193,30 +220,36 @@ def _should_run_stage(stage: StageConfig, stage_outputs: dict[str, dict[str, Any
 def _determine_final_solution(
     *,
     stage_outputs: dict[str, dict[str, Any]],
-    scenario: ScenarioConfig,
+    submission_stage: str,
 ) -> str:
-    submission_output = stage_outputs.get(scenario.submission_stage)
+    submission_output = stage_outputs.get(submission_stage)
     if submission_output and "solution" in submission_output:
         return submission_output["solution"]
     return stage_outputs["code"]["solution"]
 
 
-def _run_problem(
+def _write_task_record(task_dir: Path, task_record: dict[str, Any]) -> None:
+    _write_json(task_dir / "task_record.json", task_record)
+
+
+def _run_stage_sequence(
     *,
     problem: dict[str, Any],
-    scenario: ScenarioConfig,
+    stages: tuple[StageConfig, ...],
     config: BenchmarkConfig,
     copilot_bin: str,
     task_dir: Path,
     seen_cross_problem_session_ids: set[str],
-) -> dict[str, Any]:
+    session_lock: Lock,
+    stage_outputs: dict[str, dict[str, Any]],
+    allowed_existing_session_ids: set[str],
+) -> tuple[list[dict[str, Any]], list[str]]:
     workspace = _build_workspace(task_dir)
-    stage_outputs: dict[str, dict[str, Any]] = {}
     stage_records: list[dict[str, Any]] = []
     stage_session_ids: list[str] = []
     session_id: str | None = None
 
-    for stage in scenario.stages:
+    for stage in stages:
         if not _should_run_stage(stage, stage_outputs):
             continue
 
@@ -239,30 +272,156 @@ def _run_problem(
 
         returned_session_id = result.get("session_id")
         if returned_session_id:
-            if returned_session_id in seen_cross_problem_session_ids and returned_session_id not in stage_session_ids:
-                raise RuntimeError(
-                    f"Session {returned_session_id} was reused across different HumanEval+ problems."
-                )
+            with session_lock:
+                if (
+                    returned_session_id in seen_cross_problem_session_ids
+                    and returned_session_id not in allowed_existing_session_ids
+                    and returned_session_id not in stage_session_ids
+                ):
+                    raise RuntimeError(
+                        f"Session {returned_session_id} was reused across different HumanEval+ problems."
+                    )
+                seen_cross_problem_session_ids.add(returned_session_id)
             session_id = returned_session_id
             if returned_session_id not in stage_session_ids:
                 stage_session_ids.append(returned_session_id)
 
+    return stage_records, stage_session_ids
+
+
+def _build_task_record(
+    *,
+    problem: dict[str, Any],
+    stage_outputs: dict[str, dict[str, Any]],
+    stage_records: list[dict[str, Any]],
+    stage_session_ids: list[str],
+    submission_stage: str,
+) -> dict[str, Any]:
     if "code" not in stage_outputs:
         raise RuntimeError(f"Problem {problem['task_id']} did not produce a code stage output.")
 
-    final_solution = _determine_final_solution(stage_outputs=stage_outputs, scenario=scenario)
-    seen_cross_problem_session_ids.update(stage_session_ids)
-
+    serializable_stage_outputs = {
+        key: value for key, value in stage_outputs.items() if key != "eval_failure"
+    }
     return {
         "task_id": problem["task_id"],
         "prompt": problem["prompt"],
         "problem_session_id": stage_session_ids[0] if stage_session_ids else None,
         "stage_session_ids": stage_session_ids,
         "stages": stage_records,
-        "stage_outputs": stage_outputs,
-        "final_solution": final_solution,
-        "review": stage_outputs.get("review"),
+        "stage_outputs": serializable_stage_outputs,
+        "final_solution": _determine_final_solution(
+            stage_outputs=stage_outputs,
+            submission_stage=submission_stage,
+        ),
+        "review": serializable_stage_outputs.get("review"),
     }
+
+
+def _run_initial_problem(
+    *,
+    problem: dict[str, Any],
+    initial_stages: tuple[StageConfig, ...],
+    submission_stage: str,
+    config: BenchmarkConfig,
+    copilot_bin: str,
+    task_dir: Path,
+    seen_cross_problem_session_ids: set[str],
+    session_lock: Lock,
+) -> dict[str, Any]:
+    stage_outputs: dict[str, dict[str, Any]] = {}
+    stage_records, stage_session_ids = _run_stage_sequence(
+        problem=problem,
+        stages=initial_stages,
+        config=config,
+        copilot_bin=copilot_bin,
+        task_dir=task_dir,
+        seen_cross_problem_session_ids=seen_cross_problem_session_ids,
+        session_lock=session_lock,
+        stage_outputs=stage_outputs,
+        allowed_existing_session_ids=set(),
+    )
+    task_record = _build_task_record(
+        problem=problem,
+        stage_outputs=stage_outputs,
+        stage_records=stage_records,
+        stage_session_ids=stage_session_ids,
+        submission_stage=submission_stage,
+    )
+    _write_task_record(task_dir, task_record)
+    return task_record
+
+
+def _repair_problem(
+    *,
+    problem: dict[str, Any],
+    task_record: dict[str, Any],
+    repair_stages: tuple[StageConfig, ...],
+    config: BenchmarkConfig,
+    copilot_bin: str,
+    task_dir: Path,
+    seen_cross_problem_session_ids: set[str],
+    session_lock: Lock,
+    eval_failure: dict[str, Any],
+    submission_stage: str,
+) -> dict[str, Any]:
+    stage_outputs = dict(task_record["stage_outputs"])
+    stage_outputs["eval_failure"] = eval_failure
+    existing_session_ids = set(task_record["stage_session_ids"])
+    stage_records, new_session_ids = _run_stage_sequence(
+        problem=problem,
+        stages=repair_stages,
+        config=config,
+        copilot_bin=copilot_bin,
+        task_dir=task_dir,
+        seen_cross_problem_session_ids=seen_cross_problem_session_ids,
+        session_lock=session_lock,
+        stage_outputs=stage_outputs,
+        allowed_existing_session_ids=existing_session_ids,
+    )
+
+    merged_session_ids = list(task_record["stage_session_ids"])
+    for session_id in new_session_ids:
+        if session_id not in merged_session_ids:
+            merged_session_ids.append(session_id)
+
+    repaired_task_record = _build_task_record(
+        problem=problem,
+        stage_outputs=stage_outputs,
+        stage_records=[*task_record["stages"], *stage_records],
+        stage_session_ids=merged_session_ids,
+        submission_stage=submission_stage,
+    )
+    if "initial_eval" in task_record:
+        repaired_task_record["initial_eval"] = task_record["initial_eval"]
+    _write_task_record(task_dir, repaired_task_record)
+    return repaired_task_record
+
+
+def _run_problem_batch(
+    *,
+    problems: list[dict[str, Any]],
+    worker_count: int,
+    run_problem: Callable[[dict[str, Any]], dict[str, Any]],
+) -> list[dict[str, Any]]:
+    if worker_count <= 1:
+        return [run_problem(problem) for problem in problems]
+
+    results_by_task_id: dict[str, dict[str, Any]] = {}
+    with ThreadPoolExecutor(max_workers=worker_count) as executor:
+        futures = {executor.submit(run_problem, problem): problem["task_id"] for problem in problems}
+        for future in as_completed(futures):
+            task_id = futures[future]
+            results_by_task_id[task_id] = future.result()
+
+    return [results_by_task_id[problem["task_id"]] for problem in problems]
+
+
+def _write_samples(samples_path: Path, task_records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    _, write_jsonl, _ = _load_evalplus()
+    samples = [{"task_id": task_record["task_id"], "solution": task_record["final_solution"]} for task_record in task_records]
+    write_jsonl(str(samples_path), samples, append=False, drop_builtin=False)
+    return samples
 
 
 def run_scenario(*, scenario_id: str, run_id: str, limit: int | None = None, output_root: Path | None = None) -> Path:
@@ -280,6 +439,7 @@ def run_scenario(*, scenario_id: str, run_id: str, limit: int | None = None, out
     started_at_unix = time.time()
     started_at_mono = time.monotonic()
     problems = load_problems(limit=limit)
+    worker_count = min(config.max_parallel_workers, max(1, scenario.parallel_workers))
 
     manifest = {
         "scenario_id": scenario.id,
@@ -290,6 +450,7 @@ def run_scenario(*, scenario_id: str, run_id: str, limit: int | None = None, out
         "humaneval_plus_dataset_version": config.humaneval_plus_dataset_version,
         "runtime_measurement": "wall_clock",
         "max_parallel_workers": config.max_parallel_workers,
+        "parallel_workers_configured": scenario.parallel_workers,
         "started_at_unix": started_at_unix,
         "metadata": _build_metadata(copilot_bin),
         "fairness_rules": list(config.fairness_rules),
@@ -307,31 +468,86 @@ def run_scenario(*, scenario_id: str, run_id: str, limit: int | None = None, out
     }
     _write_json(artifacts_dir / "manifest.json", manifest)
 
-    task_records: list[dict[str, Any]] = []
-    samples: list[dict[str, Any]] = []
     seen_cross_problem_session_ids: set[str] = set()
+    session_lock = Lock()
+    repair_stage_names = set(scenario.eval_repair_stage_names)
+    initial_stages = tuple(stage for stage in scenario.stages if stage.name not in repair_stage_names)
+    repair_stages = tuple(stage for stage in scenario.stages if stage.name in repair_stage_names)
+    initial_submission_stage = "code" if repair_stages else scenario.submission_stage
 
-    for problem in problems:
+    def run_initial(problem: dict[str, Any]) -> dict[str, Any]:
         task_dir = tasks_dir / _task_slug(problem["task_id"])
-        task_record = _run_problem(
+        return _run_initial_problem(
             problem=problem,
-            scenario=scenario,
+            initial_stages=initial_stages,
+            submission_stage=initial_submission_stage,
             config=config,
             copilot_bin=copilot_bin,
             task_dir=task_dir,
             seen_cross_problem_session_ids=seen_cross_problem_session_ids,
+            session_lock=session_lock,
         )
-        _write_json(task_dir / "task_record.json", task_record)
-        task_records.append(task_record)
-        samples.append({"task_id": problem["task_id"], "solution": task_record["final_solution"]})
 
-    _, write_jsonl, _ = _load_evalplus()
-    samples_path = artifacts_dir / "samples.jsonl"
-    write_jsonl(str(samples_path), samples, append=False, drop_builtin=False)
+    task_records = _run_problem_batch(
+        problems=problems,
+        worker_count=worker_count,
+        run_problem=run_initial,
+    )
+    task_records_by_id = {task_record["task_id"]: task_record for task_record in task_records}
 
+    initial_eval_summary = None
+    repair_attempted_task_ids: list[str] = []
+    final_samples_path = artifacts_dir / "samples.jsonl"
     eval_results_path = artifacts_dir / "humaneval.eval_results.json"
     eval_log_path = artifacts_dir / "evalplus.log"
-    eval_results = _evaluate_samples(samples_path, eval_results_path, eval_log_path)
+
+    if repair_stages:
+        initial_samples_path = artifacts_dir / "initial.samples.jsonl"
+        _write_samples(initial_samples_path, task_records)
+        initial_eval_results_path = artifacts_dir / "initial.humaneval.eval_results.json"
+        initial_eval_log_path = artifacts_dir / "initial.evalplus.log"
+        initial_eval_results = _evaluate_samples(initial_samples_path, initial_eval_results_path, initial_eval_log_path)
+        initial_eval_summary = _summarize_eval(initial_eval_results)
+
+        failed_task_ids = [
+            task_id for task_id in sorted(initial_eval_results["eval"], key=_task_sort_key) if not _task_passed_eval(initial_eval_results["eval"][task_id])
+        ]
+        repair_attempted_task_ids = list(failed_task_ids)
+        for task_id, task_record in task_records_by_id.items():
+            task_record["initial_eval"] = initial_eval_results["eval"][task_id][0]
+            _write_task_record(tasks_dir / _task_slug(task_id), task_record)
+
+        if failed_task_ids:
+            failed_problem_lookup = {problem["task_id"]: problem for problem in problems}
+
+            def run_repair(problem: dict[str, Any]) -> dict[str, Any]:
+                task_dir = tasks_dir / _task_slug(problem["task_id"])
+                eval_failure = initial_eval_results["eval"][problem["task_id"]][0]
+                return _repair_problem(
+                    problem=problem,
+                    task_record=task_records_by_id[problem["task_id"]],
+                    repair_stages=repair_stages,
+                    config=config,
+                    copilot_bin=copilot_bin,
+                    task_dir=task_dir,
+                    seen_cross_problem_session_ids=seen_cross_problem_session_ids,
+                    session_lock=session_lock,
+                    eval_failure=eval_failure,
+                    submission_stage=scenario.submission_stage,
+                )
+
+            repaired_records = _run_problem_batch(
+                problems=[failed_problem_lookup[task_id] for task_id in failed_task_ids],
+                worker_count=worker_count,
+                run_problem=run_repair,
+            )
+            for repaired_record in repaired_records:
+                task_records_by_id[repaired_record["task_id"]] = repaired_record
+
+        task_records = [task_records_by_id[problem["task_id"]] for problem in problems]
+
+    _write_samples(final_samples_path, task_records)
+    eval_results = _evaluate_samples(final_samples_path, eval_results_path, eval_log_path)
     eval_summary = _summarize_eval(eval_results)
 
     stage_cost_records: list[dict[str, Any]] = []
@@ -353,20 +569,26 @@ def run_scenario(*, scenario_id: str, run_id: str, limit: int | None = None, out
         "server": scenario.server,
         "task_count": len(task_records),
         "predicted_failures": predicted_failures,
+        "repair_attempted_tasks": len(repair_attempted_task_ids),
+        "repair_attempted_task_ids": repair_attempted_task_ids,
         "runtime_measurement": "wall_clock",
         "runtime_seconds": round(runtime_seconds, 6),
         "started_at_unix": started_at_unix,
         "ended_at_unix": ended_at_unix,
         "max_parallel_workers": config.max_parallel_workers,
-        "parallel_workers_used": 1,
+        "parallel_workers_used": worker_count,
         "eval": eval_summary,
         "costs": cost_summary,
         "artifacts": {
-            "samples_path": str(samples_path),
+            "samples_path": str(final_samples_path),
             "eval_results_path": str(eval_results_path),
             "task_records_path": str(artifacts_dir / "task_records.json"),
         },
     }
+    if initial_eval_summary is not None:
+        summary["initial_eval"] = initial_eval_summary
+        summary["artifacts"]["initial_samples_path"] = str(artifacts_dir / "initial.samples.jsonl")
+        summary["artifacts"]["initial_eval_results_path"] = str(artifacts_dir / "initial.humaneval.eval_results.json")
 
     _write_json(artifacts_dir / "task_records.json", {"tasks": task_records})
     _write_json(artifacts_dir / "summary.json", summary)

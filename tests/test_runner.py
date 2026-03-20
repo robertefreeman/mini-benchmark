@@ -32,6 +32,14 @@ class RunnerTests(unittest.TestCase):
             self.assertTrue(output_path.exists())
             self.assertTrue(log_path.exists())
 
+    def test_task_passed_eval_requires_base_and_plus_pass(self) -> None:
+        self.assertTrue(
+            runner._task_passed_eval([{"base_status": "pass", "plus_status": "pass"}])
+        )
+        self.assertFalse(
+            runner._task_passed_eval([{"base_status": "pass", "plus_status": "fail"}])
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

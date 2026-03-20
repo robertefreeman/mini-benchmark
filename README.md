@@ -1,12 +1,13 @@
 # mini-benchmark
 
-This repository tracks a benchmark comparing three ways of solving the full HumanEval+ suite with GitHub Copilot CLI.
+This repository tracks a benchmark comparing four ways of solving the full HumanEval+ suite with GitHub Copilot CLI.
 
 ## Scenarios
 
 1. **`gpt-5.4-plan-code`**: `gpt-5.4` handles both `plan` and `code` on `muntz` at `--reasoning-effort medium`.
 2. **`gpt-5.4-plan-gpt-5.4-mini-code`**: `gpt-5.4` plans at `--reasoning-effort high`, then `gpt-5.4-mini` codes at `--reasoning-effort xhigh` on `griswold`.
 3. **`gpt-5.4-plan-gpt-5.4-mini-code-review-fix`**: the same mini-track flow on `griswold`, plus `gpt-5.4` review at `--reasoning-effort high` and a conditional `gpt-5.4-mini` fix at `--reasoning-effort xhigh`.
+4. **`gpt-5.4-plan-gpt-5.4-mini-code-eval-repair`**: `gpt-5.4` plans at `--reasoning-effort medium`, `gpt-5.4-mini` codes at `--reasoning-effort medium`, then only EvalPlus failures are sent through a `gpt-5.4` high repair-plan step and a `gpt-5.4-mini` high fix step on `muntz` with up to 6 concurrent workers.
 
 ## What we will measure
 
@@ -29,7 +30,8 @@ This repository tracks a benchmark comparing three ways of solving the full Huma
 - Run **one pass per scenario** to limit inference cost.
 - Run the scenarios on these servers:
   - `muntz`: `gpt-5.4-plan-code`
-  - `griswold`: both mini-track scenarios
+  - `muntz`: `gpt-5.4-plan-gpt-5.4-mini-code-eval-repair`
+  - `griswold`: both existing mini-track scenarios
 - Keep the runs aligned on the same default GitHub Copilot harness and tool surface.
 - Prefer only the MCP servers and tools that are preloaded in the default GitHub Copilot CLI environment.
 - Use the official HumanEval+ evaluator for correctness.
@@ -40,6 +42,7 @@ This repository tracks a benchmark comparing three ways of solving the full Huma
 - Measure runtime as wall-clock time from benchmark start to benchmark end.
 - Limit any parallel agent or subagent workflow to at most 6 concurrent workers.
 - In the review/fix scenario, the review gate is pass/fail only; style and cleanup feedback are out of scope.
+- In the EvalPlus-repair scenario, only tasks that actually fail EvalPlus enter the repair path.
 
 ## Expected outputs
 
@@ -52,11 +55,11 @@ This repository will store:
 
 ## Harness layout
 
-- `config/benchmark.json`: benchmark pinning, three scenario definitions, per-stage reasoning budgets, and the parallelism cap
+- `config/benchmark.json`: benchmark pinning, four scenario definitions, per-stage reasoning budgets, and the parallelism cap
 - `config/pricing.openai.json`: explicit token pricing used for cost calculations
-- `prompts/`: prompt templates for planning, coding, pass/fail review, and conditional fixing
+- `prompts/`: prompt templates for planning, coding, pass/fail review, repair planning, and fixing
 - `mini_benchmark/`: Python harness for local execution, telemetry parsing, pricing, and remote orchestration
-- `tests/`: lightweight unit tests for telemetry, pricing, and response parsing
+- `tests/`: lightweight unit tests for telemetry, pricing, response parsing, and runner behavior
 
 ## Main commands
 
@@ -93,7 +96,8 @@ Launch multiple selected scenarios together:
 ```bash
 python -m mini_benchmark launch-remote --run-id humaneval-full-001 \
   --scenario-id gpt-5.4-plan-gpt-5.4-mini-code \
-  --scenario-id gpt-5.4-plan-gpt-5.4-mini-code-review-fix
+  --scenario-id gpt-5.4-plan-gpt-5.4-mini-code-review-fix \
+  --scenario-id gpt-5.4-plan-gpt-5.4-mini-code-eval-repair
 ```
 
 If you omit `--scenario-id`, the harness targets all configured scenarios.

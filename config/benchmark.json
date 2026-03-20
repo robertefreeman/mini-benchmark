@@ -34,6 +34,8 @@
       "display_name": "GPT-5.4 plan + code",
       "server": "muntz",
       "submission_stage": "code",
+      "parallel_workers": 1,
+      "eval_repair_stage_names": [],
       "stages": [
         {
           "name": "plan",
@@ -54,6 +56,8 @@
       "display_name": "GPT-5.4 plan + GPT-5.4-mini code",
       "server": "griswold",
       "submission_stage": "code",
+      "parallel_workers": 1,
+      "eval_repair_stage_names": [],
       "stages": [
         {
           "name": "plan",
@@ -74,6 +78,8 @@
       "display_name": "GPT-5.4 plan + GPT-5.4-mini code + GPT-5.4 review + GPT-5.4-mini fix",
       "server": "griswold",
       "submission_stage": "fix",
+      "parallel_workers": 1,
+      "eval_repair_stage_names": [],
       "stages": [
         {
           "name": "plan",
@@ -98,6 +104,43 @@
           "model": "gpt-5.4-mini",
           "reasoning_effort": "xhigh",
           "prompt_template": "fixer.txt"
+        }
+      ]
+    },
+    {
+      "id": "gpt-5.4-plan-gpt-5.4-mini-code-eval-repair",
+      "display_name": "GPT-5.4 medium plan + GPT-5.4-mini medium code + EvalPlus repair",
+      "server": "muntz",
+      "submission_stage": "fix",
+      "parallel_workers": 6,
+      "eval_repair_stage_names": [
+        "repair_plan",
+        "fix"
+      ],
+      "stages": [
+        {
+          "name": "plan",
+          "model": "gpt-5.4",
+          "reasoning_effort": "medium",
+          "prompt_template": "planner.txt"
+        },
+        {
+          "name": "code",
+          "model": "gpt-5.4-mini",
+          "reasoning_effort": "medium",
+          "prompt_template": "coder.txt"
+        },
+        {
+          "name": "repair_plan",
+          "model": "gpt-5.4",
+          "reasoning_effort": "high",
+          "prompt_template": "repair_planner.txt"
+        },
+        {
+          "name": "fix",
+          "model": "gpt-5.4-mini",
+          "reasoning_effort": "high",
+          "prompt_template": "repair_fixer.txt"
         }
       ]
     }

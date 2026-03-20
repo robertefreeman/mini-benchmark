@@ -26,6 +26,8 @@ class ScenarioConfig:
     display_name: str
     server: str
     submission_stage: str
+    parallel_workers: int
+    eval_repair_stage_names: tuple[str, ...]
     stages: tuple[StageConfig, ...]
 
 
@@ -63,6 +65,8 @@ def load_benchmark_config() -> BenchmarkConfig:
             display_name=scenario["display_name"],
             server=scenario["server"],
             submission_stage=scenario["submission_stage"],
+            parallel_workers=scenario.get("parallel_workers", 1),
+            eval_repair_stage_names=tuple(scenario.get("eval_repair_stage_names", [])),
             stages=tuple(
                 StageConfig(
                     name=stage["name"],

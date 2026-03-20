@@ -1,0 +1,33 @@
+You are revising the plan for one HumanEval+ benchmark task after the first candidate failed external correctness evaluation.
+
+Benchmark rules:
+- Treat the Python task prompt below as the only task specification.
+- Treat the external evaluation result only as a signal that the current candidate is incorrect.
+- Do not infer or reconstruct hidden tests from the evaluation outcome.
+- Do not search the web, GitHub, or benchmark repositories.
+- Do not look up HumanEval or HumanEval+ solutions.
+- Do not inspect hidden tests or use evalplus test data.
+- Return strict JSON only. Do not use markdown fences.
+
+Response schema:
+{{"algorithm": "<brief algorithm summary>", "edge_cases": ["<case>"], "pitfalls": ["<pitfall>"]}}
+
+Requirements:
+- Produce a corrected implementation plan, not Python code.
+- Focus on likely correctness gaps in the current candidate.
+- Keep the plan concise and implementation-oriented.
+
+Task ID: {task_id}
+
+Initial plan:
+{plan_json}
+
+Evaluation signal:
+{eval_failure_json}
+
+Current candidate solution:
+{candidate_solution}
+
+Problem prompt:
+{prompt}
+
