@@ -235,6 +235,7 @@ def _write_task_record(task_dir: Path, task_record: dict[str, Any]) -> None:
 def _run_stage_sequence(
     *,
     problem: dict[str, Any],
+    session_strategy: str,
     stages: tuple[StageConfig, ...],
     config: BenchmarkConfig,
     copilot_bin: str,
@@ -263,7 +264,7 @@ def _run_stage_sequence(
             working_dir=workspace,
             artifact_dir=task_dir / "stages" / stage.name,
             stage_name=stage.name,
-            resume_session_id=session_id,
+            resume_session_id=session_id if session_strategy == "resume" else None,
         )
 
         parsed = _parse_stage_output(stage.name, result["response_text"])
@@ -321,6 +322,7 @@ def _build_task_record(
 def _run_initial_problem(
     *,
     problem: dict[str, Any],
+    session_strategy: str,
     initial_stages: tuple[StageConfig, ...],
     submission_stage: str,
     config: BenchmarkConfig,
@@ -332,6 +334,7 @@ def _run_initial_problem(
     stage_outputs: dict[str, dict[str, Any]] = {}
     stage_records, stage_session_ids = _run_stage_sequence(
         problem=problem,
+        session_strategy=session_strategy,
         stages=initial_stages,
         config=config,
         copilot_bin=copilot_bin,
@@ -356,6 +359,7 @@ def _repair_problem(
     *,
     problem: dict[str, Any],
     task_record: dict[str, Any],
+    session_strategy: str,
     repair_stages: tuple[StageConfig, ...],
     config: BenchmarkConfig,
     copilot_bin: str,
@@ -370,6 +374,7 @@ def _repair_problem(
     existing_session_ids = set(task_record["stage_session_ids"])
     stage_records, new_session_ids = _run_stage_sequence(
         problem=problem,
+        session_strategy=session_strategy,
         stages=repair_stages,
         config=config,
         copilot_bin=copilot_bin,
@@ -439,6 +444,7 @@ def run_scenario(*, scenario_id: str, run_id: str, limit: int | None = None, out
     started_at_unix = time.time()
     started_at_mono = time.monotonic()
     problems = load_problems(limit=limit)
+    limited_run = limit is not None
     worker_count = min(config.max_parallel_workers, max(1, scenario.parallel_workers))
 
     manifest = {
@@ -479,6 +485,7 @@ def run_scenario(*, scenario_id: str, run_id: str, limit: int | None = None, out
         task_dir = tasks_dir / _task_slug(problem["task_id"])
         return _run_initial_problem(
             problem=problem,
+            session_strategy=scenario.session_strategy,
             initial_stages=initial_stages,
             submission_stage=initial_submission_stage,
             config=config,
@@ -501,7 +508,7 @@ def run_scenario(*, scenario_id: str, run_id: str, limit: int | None = None, out
     eval_results_path = artifacts_dir / "humaneval.eval_results.json"
     eval_log_path = artifacts_dir / "evalplus.log"
 
-    if repair_stages:
+    if repair_stages and not limited_run:
         initial_samples_path = artifacts_dir / "initial.samples.jsonl"
         _write_samples(initial_samples_path, task_records)
         initial_eval_results_path = artifacts_dir / "initial.humaneval.eval_results.json"
@@ -526,6 +533,7 @@ def run_scenario(*, scenario_id: str, run_id: str, limit: int | None = None, out
                 return _repair_problem(
                     problem=problem,
                     task_record=task_records_by_id[problem["task_id"]],
+                    session_strategy=scenario.session_strategy,
                     repair_stages=repair_stages,
                     config=config,
                     copilot_bin=copilot_bin,
@@ -547,8 +555,10 @@ def run_scenario(*, scenario_id: str, run_id: str, limit: int | None = None, out
         task_records = [task_records_by_id[problem["task_id"]] for problem in problems]
 
     _write_samples(final_samples_path, task_records)
-    eval_results = _evaluate_samples(final_samples_path, eval_results_path, eval_log_path)
-    eval_summary = _summarize_eval(eval_results)
+    eval_summary = None
+    if not limited_run:
+        eval_results = _evaluate_samples(final_samples_path, eval_results_path, eval_log_path)
+        eval_summary = _summarize_eval(eval_results)
 
     stage_cost_records: list[dict[str, Any]] = []
     predicted_failures = 0
@@ -577,14 +587,18 @@ def run_scenario(*, scenario_id: str, run_id: str, limit: int | None = None, out
         "ended_at_unix": ended_at_unix,
         "max_parallel_workers": config.max_parallel_workers,
         "parallel_workers_used": worker_count,
+        "limited_run": limited_run,
         "eval": eval_summary,
         "costs": cost_summary,
         "artifacts": {
             "samples_path": str(final_samples_path),
-            "eval_results_path": str(eval_results_path),
             "task_records_path": str(artifacts_dir / "task_records.json"),
         },
     }
+    if not limited_run:
+        summary["artifacts"]["eval_results_path"] = str(eval_results_path)
+    else:
+        summary["eval_skipped_reason"] = "limited_run"
     if initial_eval_summary is not None:
         summary["initial_eval"] = initial_eval_summary
         summary["artifacts"]["initial_samples_path"] = str(artifacts_dir / "initial.samples.jsonl")

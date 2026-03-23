@@ -34,6 +34,7 @@
       "display_name": "GPT-5.4 plan + code",
       "server": "muntz",
       "submission_stage": "code",
+      "session_strategy": "fresh",
       "parallel_workers": 1,
       "eval_repair_stage_names": [],
       "stages": [
@@ -56,6 +57,7 @@
       "display_name": "GPT-5.4 plan + GPT-5.4-mini code",
       "server": "griswold",
       "submission_stage": "code",
+      "session_strategy": "fresh",
       "parallel_workers": 1,
       "eval_repair_stage_names": [],
       "stages": [
@@ -78,6 +80,7 @@
       "display_name": "GPT-5.4 plan + GPT-5.4-mini code + GPT-5.4 review + GPT-5.4-mini fix",
       "server": "griswold",
       "submission_stage": "fix",
+      "session_strategy": "fresh",
       "parallel_workers": 1,
       "eval_repair_stage_names": [],
       "stages": [
@@ -112,7 +115,8 @@
       "display_name": "GPT-5.4 medium plan + GPT-5.4-mini medium code + EvalPlus repair",
       "server": "muntz",
       "submission_stage": "fix",
-      "parallel_workers": 6,
+      "session_strategy": "fresh",
+      "parallel_workers": 2,
       "eval_repair_stage_names": [
         "repair_plan",
         "fix"

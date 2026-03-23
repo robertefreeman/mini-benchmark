@@ -7,7 +7,7 @@ This repository tracks a benchmark comparing four ways of solving the full Human
 1. **`gpt-5.4-plan-code`**: `gpt-5.4` handles both `plan` and `code` on `muntz` at `--reasoning-effort medium`.
 2. **`gpt-5.4-plan-gpt-5.4-mini-code`**: `gpt-5.4` plans at `--reasoning-effort high`, then `gpt-5.4-mini` codes at `--reasoning-effort xhigh` on `griswold`.
 3. **`gpt-5.4-plan-gpt-5.4-mini-code-review-fix`**: the same mini-track flow on `griswold`, plus `gpt-5.4` review at `--reasoning-effort high` and a conditional `gpt-5.4-mini` fix at `--reasoning-effort xhigh`.
-4. **`gpt-5.4-plan-gpt-5.4-mini-code-eval-repair`**: `gpt-5.4` plans at `--reasoning-effort medium`, `gpt-5.4-mini` codes at `--reasoning-effort medium`, then only EvalPlus failures are sent through a `gpt-5.4` high repair-plan step and a `gpt-5.4-mini` high fix step on `muntz` with up to 6 concurrent workers.
+4. **`gpt-5.4-plan-gpt-5.4-mini-code-eval-repair`**: `gpt-5.4` plans at `--reasoning-effort medium`, `gpt-5.4-mini` codes at `--reasoning-effort medium`, then only EvalPlus failures are sent through a `gpt-5.4` high repair-plan step and a `gpt-5.4-mini` high fix step on `muntz` with 2 concurrent workers.
 
 ## What we will measure
 
@@ -38,6 +38,7 @@ This repository tracks a benchmark comparing four ways of solving the full Human
 - Extract token telemetry from Copilot CLI logs so input, output, and cache-read tokens are captured from the actual runs.
 - Price runs using the published OpenAI API rates for the models involved.
 - Run each HumanEval+ problem in its own isolated workspace and never reuse one problem session for another problem.
+- Run each benchmark stage in a fresh Copilot session by default; carry context between stages through prompts and recorded stage outputs instead of `--resume`.
 - Disable custom Copilot instructions during benchmark runs so local AGENTS-style guidance does not leak into results.
 - Measure runtime as wall-clock time from benchmark start to benchmark end.
 - Limit any parallel agent or subagent workflow to at most 6 concurrent workers.
@@ -55,7 +56,7 @@ This repository will store:
 
 ## Harness layout
 
-- `config/benchmark.json`: benchmark pinning, four scenario definitions, per-stage reasoning budgets, and the parallelism cap
+- `config/benchmark.json`: benchmark pinning, four scenario definitions, per-stage reasoning budgets, session strategy, and the parallelism cap
 - `config/pricing.openai.json`: explicit token pricing used for cost calculations
 - `prompts/`: prompt templates for planning, coding, pass/fail review, repair planning, and fixing
 - `mini_benchmark/`: Python harness for local execution, telemetry parsing, pricing, and remote orchestration

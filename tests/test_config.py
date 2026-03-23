@@ -21,7 +21,8 @@ class ConfigTests(unittest.TestCase):
         efforts = [stage.reasoning_effort for stage in scenario.stages]
         self.assertEqual(efforts, ["medium", "medium", "high", "high"])
         self.assertEqual(scenario.server, "muntz")
-        self.assertEqual(scenario.parallel_workers, 6)
+        self.assertEqual(scenario.session_strategy, "fresh")
+        self.assertEqual(scenario.parallel_workers, 2)
         self.assertEqual(scenario.eval_repair_stage_names, ("repair_plan", "fix"))
 
 
