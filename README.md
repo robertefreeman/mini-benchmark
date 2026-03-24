@@ -1,6 +1,6 @@
 # mini-benchmark
 
-This repository tracks a benchmark comparing five ways of solving the full HumanEval+ suite with GitHub Copilot CLI.
+This repository tracks a benchmark comparing six ways of solving the full HumanEval+ suite with GitHub Copilot CLI.
 
 ## Scenarios
 
@@ -9,6 +9,7 @@ This repository tracks a benchmark comparing five ways of solving the full Human
 3. **`gpt-5.4-plan-gpt-5.4-mini-code-review-fix`**: the same mini-track flow on `griswold`, plus `gpt-5.4` review at `--reasoning-effort high` and a conditional `gpt-5.4-mini` fix at `--reasoning-effort xhigh`.
 4. **`gpt-5.4-plan-gpt-5.4-mini-code-eval-repair`**: `gpt-5.4` plans at `--reasoning-effort medium`, `gpt-5.4-mini` codes at `--reasoning-effort medium`, then only EvalPlus failures are sent through a `gpt-5.4` high repair-plan step and a `gpt-5.4-mini` high fix step on `muntz` with 2 concurrent workers.
 5. **`gpt-5.4-plan-gpt-5.4-mini-code-eval-direct-fix`**: `gpt-5.4` plans at `--reasoning-effort medium`, `gpt-5.4-mini` codes at `--reasoning-effort medium`, then only EvalPlus failures are sent directly to a `gpt-5.4` high fix step on `muntz` with 2 concurrent workers.
+6. **`claude-opus-4.6-plan-code`**: `claude-opus-4.6` handles both `plan` and `code` on `griswold` at `--reasoning-effort medium`.
 
 ## What we will measure
 
@@ -16,14 +17,14 @@ This repository tracks a benchmark comparing five ways of solving the full Human
 - Input tokens
 - Output tokens
 - Cache read tokens
-- Total token-derived cost using published OpenAI API pricing
+- Total token-derived cost using published API pricing for the models involved
 - Total wall-clock time for each full benchmark run
 
 ## Benchmark pinning
 
 - `evalplus==0.3.1`
 - HumanEval+ dataset version: `v0.1.10` (via the pinned `evalplus` package)
-- Pricing source: `https://openai.com/api/pricing/`
+- Pricing sources: `https://openai.com/api/pricing/` and `https://platform.claude.com/docs/en/about-claude/pricing`
 
 ## Benchmark rules
 
@@ -33,7 +34,9 @@ This repository tracks a benchmark comparing five ways of solving the full Human
   - `muntz`: `gpt-5.4-plan-code`
   - `muntz`: `gpt-5.4-plan-gpt-5.4-mini-code-eval-repair`
   - `muntz`: `gpt-5.4-plan-gpt-5.4-mini-code-eval-direct-fix`
-  - `griswold`: both existing mini-track scenarios
+  - `griswold`: `gpt-5.4-plan-gpt-5.4-mini-code`
+  - `griswold`: `gpt-5.4-plan-gpt-5.4-mini-code-review-fix`
+  - `griswold`: `claude-opus-4.6-plan-code`
 - Keep the runs aligned on the same default GitHub Copilot harness and tool surface.
 - Prefer only the MCP servers and tools that are preloaded in the default GitHub Copilot CLI environment.
 - Use the official HumanEval+ evaluator for correctness.
@@ -58,8 +61,8 @@ This repository will store:
 
 ## Harness layout
 
-- `config/benchmark.json`: benchmark pinning, five scenario definitions, per-stage reasoning budgets, session strategy, and the parallelism cap
-- `config/pricing.openai.json`: explicit token pricing used for cost calculations
+- `config/benchmark.json`: benchmark pinning, six scenario definitions, per-stage reasoning budgets, session strategy, and the parallelism cap
+- `config/pricing.openai.json`: explicit token pricing used for cost calculations across the configured models
 - `prompts/`: prompt templates for planning, coding, pass/fail review, repair planning, and fixing
 - `mini_benchmark/`: Python harness for local execution, telemetry parsing, pricing, and remote orchestration
 - `tests/`: lightweight unit tests for telemetry, pricing, response parsing, and runner behavior
@@ -101,7 +104,8 @@ python -m mini_benchmark launch-remote --run-id humaneval-full-001 \
   --scenario-id gpt-5.4-plan-gpt-5.4-mini-code \
   --scenario-id gpt-5.4-plan-gpt-5.4-mini-code-review-fix \
   --scenario-id gpt-5.4-plan-gpt-5.4-mini-code-eval-repair \
-  --scenario-id gpt-5.4-plan-gpt-5.4-mini-code-eval-direct-fix
+  --scenario-id gpt-5.4-plan-gpt-5.4-mini-code-eval-direct-fix \
+  --scenario-id claude-opus-4.6-plan-code
 ```
 
 If you omit `--scenario-id`, the harness targets all configured scenarios.

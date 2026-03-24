@@ -3,8 +3,8 @@
     "dataset": "humaneval",
     "evalplus_version": "0.3.1",
     "humaneval_plus_dataset_version": "v0.1.10",
-    "pricing_source_url": "https://openai.com/api/pricing/",
-    "pricing_captured_at": "2026-03-19",
+    "pricing_source_url": "https://openai.com/api/pricing/ ; https://platform.claude.com/docs/en/about-claude/pricing",
+    "pricing_captured_at": "2026-03-24",
     "max_parallel_workers": 6,
     "remote_root": "$HOME/mini-benchmark",
     "copilot_bin": "$HOME/.local/bin/copilot",
@@ -23,7 +23,7 @@
   "fairness_rules": [
     "Use one full HumanEval+ pass per scenario.",
     "Use the HumanEval prompt only; do not inspect hidden tests or benchmark solutions.",
-    "Use the same Copilot CLI harness defaults and command-line flags across both scenarios.",
+    "Use the same Copilot CLI harness defaults and command-line flags across all scenarios.",
     "Never reuse one problem session for a different HumanEval+ task.",
     "Measure runtime as wall-clock time from scenario start to scenario end.",
     "Limit any parallel agent or subagent workflow to at most 6 concurrent workers."
@@ -176,6 +176,29 @@
           "model": "gpt-5.4",
           "reasoning_effort": "high",
           "prompt_template": "direct_repair_fixer.txt"
+        }
+      ]
+    },
+    {
+      "id": "claude-opus-4.6-plan-code",
+      "display_name": "Claude Opus 4.6 plan + code",
+      "server": "griswold",
+      "submission_stage": "code",
+      "session_strategy": "fresh",
+      "parallel_workers": 1,
+      "eval_repair_stage_names": [],
+      "stages": [
+        {
+          "name": "plan",
+          "model": "claude-opus-4.6",
+          "reasoning_effort": "medium",
+          "prompt_template": "planner.txt"
+        },
+        {
+          "name": "code",
+          "model": "claude-opus-4.6",
+          "reasoning_effort": "medium",
+          "prompt_template": "coder.txt"
         }
       ]
     }
