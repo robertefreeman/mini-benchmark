@@ -1,73 +1,123 @@
 # mini-benchmark
 
-This repository tracks a benchmark comparing six ways of solving the full HumanEval+ suite with GitHub Copilot CLI.
+`mini-benchmark` is a repository for comparing multiple ways of solving the full HumanEval+ suite with **GitHub Copilot CLI** as the coding harness.
 
-## Scenarios
+The goal is not just to compare models. It is to compare **end-to-end coding workflows** built on the same Copilot CLI interface: planning, coding, review, repair, direct-fix, and single-pass variants, all evaluated against the same HumanEval+ benchmark and measured for correctness, runtime, token usage, and cost.
 
-1. **`gpt-5.4-plan-code`**: `gpt-5.4` handles both `plan` and `code` on `muntz` at `--reasoning-effort medium`.
-2. **`gpt-5.4-plan-gpt-5.4-mini-code`**: `gpt-5.4` plans at `--reasoning-effort high`, then `gpt-5.4-mini` codes at `--reasoning-effort xhigh` on `griswold`.
-3. **`gpt-5.4-plan-gpt-5.4-mini-code-review-fix`**: the same mini-track flow on `griswold`, plus `gpt-5.4` review at `--reasoning-effort high` and a conditional `gpt-5.4-mini` fix at `--reasoning-effort xhigh`.
-4. **`gpt-5.4-plan-gpt-5.4-mini-code-eval-repair`**: `gpt-5.4` plans at `--reasoning-effort medium`, `gpt-5.4-mini` codes at `--reasoning-effort medium`, then only EvalPlus failures are sent through a `gpt-5.4` high repair-plan step and a `gpt-5.4-mini` high fix step on `muntz` with 2 concurrent workers.
-5. **`gpt-5.4-plan-gpt-5.4-mini-code-eval-direct-fix`**: `gpt-5.4` plans at `--reasoning-effort medium`, `gpt-5.4-mini` codes at `--reasoning-effort medium`, then only EvalPlus failures are sent directly to a `gpt-5.4` high fix step on `muntz` with 2 concurrent workers.
-6. **`claude-opus-4.6-plan-code`**: `claude-opus-4.6` handles both `plan` and `code` on `griswold` at `--reasoning-effort medium`.
+## Executive Summary
 
-## What we will measure
+The completed runs currently point to three different winners, depending on what you care about.
 
-- Percent of HumanEval+ problems solved correctly
-- Input tokens
-- Output tokens
-- Cache read tokens
-- Total token-derived cost using published API pricing for the models involved
-- Total wall-clock time for each full benchmark run
+- **Best overall correctness:** Benchmark 4 with `160 / 164` fully correct tasks (`97.5610%`).
+- **Best single-pass baseline:** Benchmark 6 with `155 / 164` fully correct tasks (`94.5122%`).
+- **Cheapest and fastest run:** Benchmark 5 at `$9.716830` and `3251.658s` (`54m 12s`).
 
-## Benchmark pinning
+Benchmark 6 shows that `claude-opus-4.6` can beat the single-pass GPT baselines on correctness, but it does so at a very high cost. Benchmark 4 is still the best overall result because its repair path raises correctness much further while staying relatively fast. Benchmark 5 remains the strongest efficiency tradeoff.
 
-- `evalplus==0.3.1`
-- HumanEval+ dataset version: `v0.1.10` (via the pinned `evalplus` package)
-- Pricing sources: `https://openai.com/api/pricing/` and `https://platform.claude.com/docs/en/about-claude/pricing`
+### Current benchmark results
 
-## Benchmark rules
+| Benchmark | Status | Fully correct (`base` + `plus`) | Total cost | Runtime | Main takeaway |
+| --- | --- | ---: | ---: | ---: | --- |
+| Benchmark 1 | Complete | 150 / 164 | `$17.942092` | `1h 36m 17s` | GPT-5.4 baseline |
+| Benchmark 2 | Complete | 153 / 164 | `$10.634113` | `4h 23m 35s` | Cheaper than Benchmark 1, but very slow |
+| Benchmark 3 | Not yet run | — | — | — | Review/fix variant on the mini track |
+| Benchmark 4 | Complete | 160 / 164 | `$10.934886` | `59m 26s` | Best overall correctness |
+| Benchmark 5 | Complete | 153 / 164 | `$9.716830` | `54m 12s` | Cheapest and fastest completed run |
+| Benchmark 6 | Complete | 155 / 164 | `$40.944668` | `1h 28m 5s` | Best single-pass baseline, but very expensive |
 
-- Use the **full HumanEval+ benchmark**, not an easy-only subset.
-- Run **one pass per scenario** to limit inference cost.
-- Run the scenarios on these servers:
-  - `muntz`: `gpt-5.4-plan-code`
-  - `muntz`: `gpt-5.4-plan-gpt-5.4-mini-code-eval-repair`
-  - `muntz`: `gpt-5.4-plan-gpt-5.4-mini-code-eval-direct-fix`
-  - `griswold`: `gpt-5.4-plan-gpt-5.4-mini-code`
-  - `griswold`: `gpt-5.4-plan-gpt-5.4-mini-code-review-fix`
-  - `griswold`: `claude-opus-4.6-plan-code`
-- Keep the runs aligned on the same default GitHub Copilot harness and tool surface.
-- Prefer only the MCP servers and tools that are preloaded in the default GitHub Copilot CLI environment.
-- Use the official HumanEval+ evaluator for correctness.
-- Extract token telemetry from Copilot CLI logs so input, output, and cache-read tokens are captured from the actual runs.
-- Price runs using the published OpenAI API rates for the models involved.
-- Run each HumanEval+ problem in its own isolated workspace and never reuse one problem session for another problem.
-- Run each benchmark stage in a fresh Copilot session by default; carry context between stages through prompts and recorded stage outputs instead of `--resume`.
-- Disable custom Copilot instructions during benchmark runs so local AGENTS-style guidance does not leak into results.
-- Measure runtime as wall-clock time from benchmark start to benchmark end.
-- Limit any parallel agent or subagent workflow to at most 6 concurrent workers.
-- In the review/fix scenario, the review gate is pass/fail only; style and cleanup feedback are out of scope.
-- In the EvalPlus-repair scenario, only tasks that actually fail EvalPlus enter the repair path.
+For the full benchmark write-up, see [`humaneval-b1-b2-report.md`](./humaneval-b1-b2-report.md).
 
-## Expected outputs
+## Why GitHub Copilot CLI Is the Harness
 
-This repository will store:
+The core design choice in this repo is to benchmark coding workflows through **GitHub Copilot CLI**, not through direct model API calls or ad hoc scripts.
 
-- Automation used to launch and evaluate the runs
-- Raw benchmark artifacts and logs
-- Parsed metrics for each scenario
-- A final side-by-side comparison summary
+That matters because Copilot CLI is the actual coding surface being studied.
 
-## Harness layout
+- It provides the same terminal-agent environment across scenarios.
+- It exposes model choice and reasoning effort through the same CLI interface.
+- It produces structured logs that can be mined for token telemetry.
+- It lets the benchmark compare workflow design while holding the tool surface mostly constant.
 
-- `config/benchmark.json`: benchmark pinning, six scenario definitions, per-stage reasoning budgets, session strategy, and the parallelism cap
-- `config/pricing.openai.json`: explicit token pricing used for cost calculations across the configured models
-- `prompts/`: prompt templates for planning, coding, pass/fail review, repair planning, and fixing
-- `mini_benchmark/`: Python harness for local execution, telemetry parsing, pricing, and remote orchestration
-- `tests/`: lightweight unit tests for telemetry, pricing, response parsing, and runner behavior
+In other words, this project is measuring how different Copilot-driven workflows behave under a shared coding harness, not just how raw models score in isolation.
 
-## Main commands
+### Common Copilot harness settings
+
+All benchmark stages are launched through the same Copilot CLI defaults from `config/benchmark.json`:
+
+- `--allow-all`
+- `--no-ask-user`
+- `--no-custom-instructions`
+- `--output-format json`
+- `--stream off`
+- `--log-level debug`
+
+Those settings are important because they keep the runs comparable and make telemetry collection reliable.
+
+## Methodology
+
+### What is being measured
+
+Every completed run in this repo is evaluated on:
+
+- strict HumanEval+ correctness
+- base HumanEval pass rate
+- input, output, and cached-input tokens
+- total token-derived cost using published vendor pricing
+- total wall-clock runtime
+
+### Fairness rules
+
+The benchmark tries to hold the execution environment steady while varying only the workflow and model choices.
+
+- Use the **full HumanEval+ suite** (`164` tasks).
+- Use the HumanEval task prompt only; do not inspect hidden tests or known solutions.
+- Run one pass per scenario.
+- Use the same Copilot CLI harness defaults across scenarios.
+- Run each HumanEval task in its own isolated workspace.
+- Use fresh Copilot sessions by default rather than carrying over task state.
+- Disable custom Copilot instructions during benchmark execution.
+- Cap any parallel workflow at `6` workers.
+
+### Evaluation pipeline
+
+- Code generation is driven by GitHub Copilot CLI.
+- Correctness is judged with the official EvalPlus / HumanEval+ evaluator.
+- Token telemetry is parsed from Copilot CLI logs captured during each run.
+- Pricing is computed from `config/pricing.openai.json`, which now stores the configured model pricing across vendors.
+- Remote execution happens over SSH on the benchmark hosts (`muntz` and `griswold`).
+
+## Scenario Catalog
+
+| Benchmark | Scenario ID | Server | Flow | Workers | Purpose |
+| --- | --- | --- | --- | ---: | --- |
+| Benchmark 1 | `gpt-5.4-plan-code` | `muntz` | `plan` -> `code` | 1 | Plain GPT-5.4 baseline |
+| Benchmark 2 | `gpt-5.4-plan-gpt-5.4-mini-code` | `griswold` | `plan` -> `code` | 1 | Mixed-model baseline |
+| Benchmark 3 | `gpt-5.4-plan-gpt-5.4-mini-code-review-fix` | `griswold` | `plan` -> `code` -> `review` -> `fix` | 1 | Review-gated repair flow |
+| Benchmark 4 | `gpt-5.4-plan-gpt-5.4-mini-code-eval-repair` | `muntz` | `plan` -> `code` -> `repair_plan` -> `fix` | 2 | EvalPlus-gated repair flow |
+| Benchmark 5 | `gpt-5.4-plan-gpt-5.4-mini-code-eval-direct-fix` | `muntz` | `plan` -> `code` -> `fix` | 2 | EvalPlus-gated direct-fix flow |
+| Benchmark 6 | `claude-opus-4.6-plan-code` | `griswold` | `plan` -> `code` | 1 | Opus single-pass baseline |
+
+## Tools Used
+
+The repo is intentionally small, but the toolchain is specific.
+
+- **GitHub Copilot CLI**: the coding harness under test
+- **EvalPlus / HumanEval+**: the correctness evaluator
+- **Python**: local orchestration, parsing, and summarization
+- **SSH / SCP**: remote execution and artifact collection
+- **Structured prompt templates** in `prompts/`: scenario-specific planning, coding, review, and repair prompts
+
+## Repository Layout
+
+- `config/benchmark.json`: benchmark configuration, scenario definitions, reasoning budgets, and remote settings
+- `config/pricing.openai.json`: pricing metadata for all configured models
+- `prompts/`: prompt templates for each benchmark stage
+- `mini_benchmark/`: the Python harness for launching runs, parsing logs, pricing usage, and summarizing results
+- `tests/`: lightweight unit tests for the harness
+- `runs/`: collected run artifacts copied back from remote hosts
+- `humaneval-b1-b2-report.md`: the detailed benchmark comparison report
+
+## Main Commands
 
 Set up a Python environment and install the pinned benchmark dependency:
 
@@ -110,7 +160,7 @@ python -m mini_benchmark launch-remote --run-id humaneval-full-001 \
 
 If you omit `--scenario-id`, the harness targets all configured scenarios.
 
-Collect artifacts and build a combined comparison after the remote runs finish:
+Collect artifacts and build a combined comparison after remote runs finish:
 
 ```bash
 python -m mini_benchmark collect-results --run-id humaneval-full-001

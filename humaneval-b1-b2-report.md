@@ -5,107 +5,66 @@ Run IDs:
 - `humaneval-b1-b2-20260319-1629`
 - `humaneval-b4-20260321-1346`
 - `humaneval-b5-20260323-1814`
+- `humaneval-b6-20260324-1619`
 
-Date range: `2026-03-19` to `2026-03-23`
-
-## Scenarios
-
-### Benchmark 1
-
-- Scenario ID: `gpt-5.4-plan-code`
-- Server: `muntz`
-- Stages:
-  - `plan`: `gpt-5.4` at `medium`
-  - `code`: `gpt-5.4` at `medium`
-
-### Benchmark 2
-
-- Scenario ID: `gpt-5.4-plan-gpt-5.4-mini-code`
-- Server: `griswold`
-- Stages:
-  - `plan`: `gpt-5.4` at `high`
-  - `code`: `gpt-5.4-mini` at `xhigh`
-
-### Benchmark 4
-
-- Scenario ID: `gpt-5.4-plan-gpt-5.4-mini-code-eval-repair`
-- Server: `muntz`
-- Stages:
-  - `plan`: `gpt-5.4` at `medium`
-  - `code`: `gpt-5.4-mini` at `medium`
-  - `repair_plan`: `gpt-5.4` at `high`
-  - `fix`: `gpt-5.4-mini` at `high`
-- Parallel workers used: `2`
-
-### Benchmark 5
-
-- Scenario ID: `gpt-5.4-plan-gpt-5.4-mini-code-eval-direct-fix`
-- Server: `muntz`
-- Stages:
-  - `plan`: `gpt-5.4` at `medium`
-  - `code`: `gpt-5.4-mini` at `medium`
-  - `fix`: `gpt-5.4` at `high`
-- Parallel workers used: `2`
+Date range: `2026-03-19` to `2026-03-24`
 
 ## Executive Summary
 
-Benchmark 4 remained the strongest correctness result among the completed runs in this report, while Benchmark 5 became the cheapest and fastest completed full-benchmark run.
+The completed runs now show three distinct leaders, depending on what matters most.
 
-Benchmark 5 matched Benchmark 2 and Benchmark 4's initial pass on fully correct tasks, but its EvalPlus-gated direct-fix stage produced no correctness lift. That left Benchmark 4 as the clear accuracy winner, while Benchmark 5 took the efficiency lead on both cost and wall-clock runtime.
+- **Best overall correctness:** Benchmark 4, with `160 / 164` fully correct tasks (`97.5610%`).
+- **Best single-pass correctness:** Benchmark 6, with `155 / 164` fully correct tasks (`94.5122%`) and no repair flow.
+- **Best cost and runtime:** Benchmark 5, at `$9.716830` and `3251.658s` (`54m 12s`).
 
-- Correctness:
-  - Benchmark 1 HumanEval+: `150 / 164` = `91.4634%`
-  - Benchmark 2 HumanEval+: `153 / 164` = `93.2927%`
-  - Benchmark 4 initial HumanEval+: `153 / 164` = `93.2927%`
-  - Benchmark 4 final HumanEval+: `160 / 164` = `97.5610%`
-  - Benchmark 5 initial HumanEval+: `153 / 164` = `93.2927%`
-  - Benchmark 5 final HumanEval+: `153 / 164` = `93.2927%`
-- Cost:
-  - Benchmark 1: `$17.942092`
-  - Benchmark 2: `$10.634113`
-  - Benchmark 4: `$10.934886`
-  - Benchmark 5: `$9.716830`
-- Wall-clock runtime:
-  - Benchmark 1: `5777.312s` = `1h 36m 17s`
-  - Benchmark 2: `15814.830s` = `4h 23m 35s`
-  - Benchmark 4: `3566.476s` = `59m 26s`
-  - Benchmark 5: `3251.658s` = `54m 12s`
+Benchmark 6 is the strongest no-repair run in the set, beating Benchmarks 1, 2, and 5 on strict correctness. But it is also by far the most expensive run, so it does not beat Benchmark 4 overall and it is a much weaker efficiency tradeoff than Benchmark 5.
 
-Relative to Benchmark 4, Benchmark 5 was:
+### Headline takeaways
 
-- `7` fewer fully correct tasks
-- `$1.218056` cheaper (`11.1392%`)
-- `5m 14.818s` faster (`8.8271%` shorter)
+- Benchmark 4 remained the best all-around result because its repair flow lifted strict correctness from `153` to `160` while keeping runtime under an hour.
+- Benchmark 5 showed that a direct-fix path can be very efficient, but in this run it produced **no** lift over its initial pass.
+- Benchmark 6 showed that `claude-opus-4.6` can beat the single-pass GPT-5.4 baselines on correctness, but only at a much higher token cost.
+- Relative to Benchmark 1, Benchmark 6 delivered `5` more fully correct tasks and finished `8m 11.708s` faster, but cost `$23.002576` more.
+- Relative to Benchmark 5, Benchmark 6 delivered `2` more fully correct tasks, but cost `$31.227838` more and took `33m 53.946s` longer.
 
-Relative to Benchmark 2, Benchmark 5 was:
+## Scenario Matrix
 
-- the same fully correct task count
-- `$0.917283` cheaper (`8.6259%`)
-- `3h 29m 23.172s` faster (`79.4392%` shorter)
+| Benchmark | Scenario ID | Server | Flow | Parallel workers | Completed run in repo summary |
+| --- | --- | --- | --- | ---: | --- |
+| Benchmark 1 | `gpt-5.4-plan-code` | `muntz` | `plan` -> `code` | 1 | Yes |
+| Benchmark 2 | `gpt-5.4-plan-gpt-5.4-mini-code` | `griswold` | `plan` -> `code` | 1 | Yes |
+| Benchmark 4 | `gpt-5.4-plan-gpt-5.4-mini-code-eval-repair` | `muntz` | `plan` -> `code` -> `repair_plan` -> `fix` | 2 | Yes |
+| Benchmark 5 | `gpt-5.4-plan-gpt-5.4-mini-code-eval-direct-fix` | `muntz` | `plan` -> `code` -> `fix` | 2 | Yes |
+| Benchmark 6 | `claude-opus-4.6-plan-code` | `griswold` | `plan` -> `code` | 1 | Yes |
 
-Relative to Benchmark 1, Benchmark 5 was:
+## Headline Results
 
-- `3` more fully correct tasks
-- `$8.225262` cheaper (`45.8434%`)
-- `42m 5.654s` faster (`43.7168%` shorter)
+### Correctness, cost, and runtime
 
-## Correctness
-
-### Base vs HumanEval+
-
-- `base pass@1` = original HumanEval tests only
+- `Base pass@1` = original HumanEval tests only
 - `HumanEval+ pass@1` = original HumanEval tests plus the stronger EvalPlus extra tests
 
-HumanEval+ is the stricter metric and is the better indicator of robustness.
+| Metric | Benchmark 1 | Benchmark 2 | Benchmark 4 | Benchmark 5 | Benchmark 6 |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Tasks | 164 | 164 | 164 | 164 | 164 |
+| Base pass@1 | 97.6% | 98.8% | 98.8% | 97.6% | 98.8% |
+| HumanEval+ pass@1 | 91.5% | 93.3% | 97.6% | 93.3% | 94.5% |
+| Fully correct tasks (`base` + `plus`) | 150 | 153 | 160 | 153 | 155 |
+| Total cost | `$17.942092` | `$10.634113` | `$10.934886` | `$9.716830` | `$40.944668` |
+| Wall-clock runtime (seconds) | `5777.312` | `15814.830` | `3566.476` | `3251.658` | `5285.604` |
+| Wall-clock runtime | `1h 36m 17s` | `4h 23m 35s` | `59m 26s` | `54m 12s` | `1h 28m 5s` |
+| Runtime source | reconstructed | reconstructed | direct | direct | direct |
+| Parallel workers used | 1 | 1 | 2 | 2 | 1 |
+| EvalPlus repair/direct-fix attempts | 0 | 0 | 11 | 11 | 0 |
 
-### Results
+### Repair-flow outcomes
 
-| Metric | Benchmark 1 | Benchmark 2 | Benchmark 4 | Benchmark 5 |
-| --- | ---: | ---: | ---: | ---: |
-| Tasks | 164 | 164 | 164 | 164 |
-| Base pass@1 | 97.6% | 98.8% | 98.8% | 97.6% |
-| HumanEval+ pass@1 | 91.5% | 93.3% | 97.6% | 93.3% |
-| Fully correct tasks (`base` + `plus`) | 150 | 153 | 160 | 153 |
+| Benchmark | Initial fully correct | Final fully correct | Net lift | Attempts | Notes |
+| --- | ---: | ---: | ---: | ---: | --- |
+| Benchmark 4 | 153 | 160 | +7 | 11 | Best overall result in the set |
+| Benchmark 5 | 153 | 153 | +0 | 11 | Cheapest and fastest, but no correctness lift |
+
+## Benchmark-by-Benchmark Notes
 
 ### Benchmark 4 repair lift
 
@@ -166,38 +125,43 @@ HumanEval+ is the stricter metric and is the better indicator of robustness.
   - `HumanEval/151`
 - No tasks regressed under direct fix.
 
+### Benchmark 6 outcome
+
+Benchmark 6 had no repair path: it was a straight `plan` -> `code` run using `claude-opus-4.6` on `griswold`.
+
+- Fully correct tasks: `155 / 164` = `94.5122%`
+- Base pass count: `162 / 164` = `98.7805%`
+- HumanEval+ pass count: `155 / 164` = `94.5122%`
+- Failures after the single pass: `9` tasks
+
+Tasks still not fully correct in Benchmark 6:
+
+- `HumanEval/32` (`base=fail`, `plus=fail`)
+- `HumanEval/39` (`base=pass`, `plus=fail`)
+- `HumanEval/76` (`base=pass`, `plus=fail`)
+- `HumanEval/91` (`base=pass`, `plus=fail`)
+- `HumanEval/124` (`base=pass`, `plus=fail`)
+- `HumanEval/132` (`base=fail`, `plus=fail`)
+- `HumanEval/151` (`base=pass`, `plus=fail`)
+- `HumanEval/154` (`base=pass`, `plus=fail`)
+- `HumanEval/163` (`base=pass`, `plus=fail`)
+
 ## Token Usage
 
 Pricing source: `config/pricing.openai.json`
 
-### Benchmark 1 token totals
+| Benchmark | Model | Input | Cached input read | Output | Requests |
+| --- | --- | ---: | ---: | ---: | ---: |
+| Benchmark 1 | `gpt-5.4` | 6,173,993 | 4,391,680 | 93,946 | 328 |
+| Benchmark 2 | `gpt-5.4` | 3,024,103 | 1,423,872 | 72,897 | 164 |
+| Benchmark 2 | `gpt-5.4-mini` | 3,607,944 | 1,760,256 | 339,220 | 175 |
+| Benchmark 4 | `gpt-5.4` | 3,083,724 | 1,450,368 | 77,285 | 175 |
+| Benchmark 4 | `gpt-5.4-mini` | 5,285,182 | 3,541,504 | 146,938 | 279 |
+| Benchmark 5 | `gpt-5.4` | 2,882,895 | 1,423,488 | 50,331 | 164 |
+| Benchmark 5 | `gpt-5.4-mini` | 4,554,416 | 2,743,808 | 95,778 | 248 |
+| Benchmark 6 | `claude-opus-4.6` | 7,568,883 | 3,929,555 | 45,419 | 333 |
 
-| Model | Input | Cached input read | Output | Requests |
-| --- | ---: | ---: | ---: | ---: |
-| `gpt-5.4` | 6,173,993 | 4,391,680 | 93,946 | 328 |
-
-### Benchmark 2 token totals
-
-| Model | Input | Cached input read | Output | Requests |
-| --- | ---: | ---: | ---: | ---: |
-| `gpt-5.4` | 3,024,103 | 1,423,872 | 72,897 | 164 |
-| `gpt-5.4-mini` | 3,607,944 | 1,760,256 | 339,220 | 175 |
-
-### Benchmark 4 token totals
-
-| Model | Input | Cached input read | Output | Requests |
-| --- | ---: | ---: | ---: | ---: |
-| `gpt-5.4` | 3,083,724 | 1,450,368 | 77,285 | 175 |
-| `gpt-5.4-mini` | 5,285,182 | 3,541,504 | 146,938 | 279 |
-
-### Benchmark 5 token totals
-
-| Model | Input | Cached input read | Output | Requests |
-| --- | ---: | ---: | ---: | ---: |
-| `gpt-5.4` | 2,882,895 | 1,423,488 | 50,331 | 164 |
-| `gpt-5.4-mini` | 4,554,416 | 2,743,808 | 95,778 | 248 |
-
-## Cost
+## Cost Breakdown
 
 Rates used:
 
@@ -209,179 +173,85 @@ Rates used:
   - input: `$0.25 / 1M`
   - cached input: `$0.025 / 1M`
   - output: `$2.00 / 1M`
+- `claude-opus-4.6`
+  - input: `$5.00 / 1M`
+  - cached input: `$0.50 / 1M`
+  - output: `$25.00 / 1M`
 
-### Benchmark 1 cost
+| Benchmark | Model | Input cost | Cached input cost | Output cost | Subtotal |
+| --- | --- | ---: | ---: | ---: | ---: |
+| Benchmark 1 | `gpt-5.4` | `$15.434983` | `$1.097920` | `$1.409190` | `$17.942092` |
+| Benchmark 2 | `gpt-5.4` | `$7.560258` | `$0.355968` | `$1.093455` | `$9.009680` |
+| Benchmark 2 | `gpt-5.4-mini` | `$0.901986` | `$0.044006` | `$0.678440` | `$1.624432` |
+| Benchmark 4 | `gpt-5.4` | `$7.709310` | `$0.362592` | `$1.159275` | `$9.231177` |
+| Benchmark 4 | `gpt-5.4-mini` | `$1.321296` | `$0.088538` | `$0.293876` | `$1.703709` |
+| Benchmark 5 | `gpt-5.4` | `$7.207238` | `$0.355872` | `$0.754965` | `$8.318075` |
+| Benchmark 5 | `gpt-5.4-mini` | `$1.138604` | `$0.068595` | `$0.191556` | `$1.398755` |
+| Benchmark 6 | `claude-opus-4.6` | `$37.844415` | `$1.964778` | `$1.135475` | `$40.944668` |
 
-| Component | Amount |
-| --- | ---: |
-| `gpt-5.4` input cost | `$15.434983` |
-| `gpt-5.4` cached input cost | `$1.097920` |
-| `gpt-5.4` output cost | `$1.409190` |
-| **Total** | **`$17.942092`** |
+## Runtime Notes
 
-### Benchmark 2 cost
-
-| Component | Amount |
-| --- | ---: |
-| `gpt-5.4` input cost | `$7.560258` |
-| `gpt-5.4` cached input cost | `$0.355968` |
-| `gpt-5.4` output cost | `$1.093455` |
-| `gpt-5.4` subtotal | `$9.009680` |
-| `gpt-5.4-mini` input cost | `$0.901986` |
-| `gpt-5.4-mini` cached input cost | `$0.044006` |
-| `gpt-5.4-mini` output cost | `$0.678440` |
-| `gpt-5.4-mini` subtotal | `$1.624432` |
-| **Total** | **`$10.634113`** |
-
-### Benchmark 4 cost
-
-| Component | Amount |
-| --- | ---: |
-| `gpt-5.4` input cost | `$7.709310` |
-| `gpt-5.4` cached input cost | `$0.362592` |
-| `gpt-5.4` output cost | `$1.159275` |
-| `gpt-5.4` subtotal | `$9.231177` |
-| `gpt-5.4-mini` input cost | `$1.321296` |
-| `gpt-5.4-mini` cached input cost | `$0.088538` |
-| `gpt-5.4-mini` output cost | `$0.293876` |
-| `gpt-5.4-mini` subtotal | `$1.703709` |
-| **Total** | **`$10.934886`** |
-
-### Benchmark 5 cost
-
-| Component | Amount |
-| --- | ---: |
-| `gpt-5.4` input cost | `$7.207238` |
-| `gpt-5.4` cached input cost | `$0.355872` |
-| `gpt-5.4` output cost | `$0.754965` |
-| `gpt-5.4` subtotal | `$8.318075` |
-| `gpt-5.4-mini` input cost | `$1.138604` |
-| `gpt-5.4-mini` cached input cost | `$0.068595` |
-| `gpt-5.4-mini` output cost | `$0.191556` |
-| `gpt-5.4-mini` subtotal | `$1.398755` |
-| **Total** | **`$9.716830`** |
-
-## Runtime
-
-The original harness run did not produce final local summaries because two separate issues got in the way:
+Wall-clock runtime for Benchmarks 1 and 2 is reconstructed because the original harness runs did not produce final local summaries. Two issues caused that:
 
 - the detached local watcher command used during the live run had a shell concatenation bug, so automatic local collection/summarization never executed
 - the repo-side EvalPlus integration called an older API shape (`output_file=`), which does not match the installed `evalplus==0.3.1`
 
-Because of that, wall-clock runtime for Benchmarks 1 and 2 is reconstructed from:
+For those two runs, runtime is reconstructed from:
 
 - `started_at_unix` in each scenario manifest
 - the timestamp of the last pre-manual artifact written by the scenario run
 
-These reconstructed runtimes are still good end-to-end estimates for scenario duration.
+Benchmarks 4, 5, and 6 completed after the auth-persistence and EvalPlus-flow fixes, so their runtimes come directly from `summary.json`.
 
-Benchmarks 4 and 5 completed after the auth-persistence and EvalPlus-flow fixes, so their runtimes below come directly from the final `summary.json` artifacts.
+### Benchmark 2 outlier note
 
-| Metric | Benchmark 1 | Benchmark 2 | Benchmark 4 | Benchmark 5 |
-| --- | ---: | ---: | ---: | ---: |
-| Wall-clock runtime (seconds) | 5777.312 | 15814.830 | 3566.476 | 3251.658 |
-| Wall-clock runtime | 1h 36m 17s | 4h 23m 35s | 59m 26s | 54m 12s |
-| Runtime source | reconstructed | reconstructed | direct from `summary.json` | direct from `summary.json` |
+`HumanEval/32` was an extreme outlier for Benchmark 2. Its `code` stage took `5706.726s` (~`95.1` minutes).
 
-### Benchmark 2 runtime without the HumanEval/32 outlier
-
-`HumanEval/32` was an extreme outlier for Benchmark 2. Its code stage took `5706.726s` (~`95.1` minutes).
-
-To estimate a more normal total runtime, replace that one outlier with the **median Benchmark 2 code-stage time excluding HumanEval/32**, which was `20.768s`.
-
-That yields an adjusted Benchmark 2 runtime of:
+If that one task is replaced with the **median Benchmark 2 code-stage time excluding HumanEval/32** (`20.768s`), the adjusted Benchmark 2 runtime becomes:
 
 - `10128.871s` = `2h 48m 49s`
 
-Compared with the observed Benchmark 2 runtime, that adjusted figure is:
+That would still leave Benchmark 2:
 
-- `5685.959s` shorter
-- `35.9533%` lower
-
-Compared with Benchmark 1, the adjusted Benchmark 2 runtime would still be:
-
-- `75.3215%` longer
-- `1.7532x` as slow end-to-end
-
-## Why Benchmark 2 Took Longer Than Benchmark 1
-
-The architecture and the observed run data point to four main causes.
-
-### 1. The planning stage was more expensive per task
-
-Benchmark 2 used `gpt-5.4` at `high` for planning, while Benchmark 1 used `gpt-5.4` at `medium`.
-
-Average per-task plan stage wall time:
-
-- Benchmark 1: `18.451s`
-- Benchmark 2: `21.578s`
-
-That is only a modest slowdown, but it contributes across all 164 tasks.
-
-### 2. The coding stage was dramatically slower
-
-Benchmark 2 used `gpt-5.4-mini` at `xhigh` for coding, while Benchmark 1 used `gpt-5.4` at `medium`.
-
-Average per-task code stage wall time:
-
-- Benchmark 1: `16.717s`
-- Benchmark 2: `74.774s`
-
-This is the main reason the overall runtime blew up.
-
-### 3. There was a severe outlier task in Benchmark 2
-
-The slowest stage in Benchmark 2 was:
-
-- Task: `HumanEval/32`
-- Stage: `code`
-- Model: `gpt-5.4-mini`
-- Reasoning effort: `xhigh`
-- Wall time: `5706.726s` (~`95.1` minutes)
-
-This single stage consumed a large fraction of the scenario runtime.
-
-### 4. The run was sequential, so one slow task blocked everything behind it
-
-Although the harness recorded a fairness cap of `max_parallel_workers = 6`, the actual scenario runner processed tasks sequentially:
-
-- `parallel_workers_used = 1`
-
-That means one pathological slow code generation step delayed every subsequent task.
-
-### Additional observed retry behavior
-
-For `HumanEval/32` on Benchmark 2, the stage stdout included three transient retry events:
-
-- `2026-03-19T17:28:45.395Z`
-- `2026-03-19T17:59:00.936Z`
-- `2026-03-19T18:29:16.095Z`
-
-So Benchmark 2 was not just slower because of model selection and reasoning effort; at least one task also experienced repeated backend/API retries.
+- `75.3215%` slower than Benchmark 1
+- `1.7532x` as slow end-to-end as Benchmark 1
 
 ## Interpretation
 
-If the goal is strongest correctness on the completed runs, Benchmark 4 won.
+### Which benchmark won?
 
-If the goal is cheapest or fastest completed full-benchmark run, Benchmark 5 won.
+- **Best overall correctness:** Benchmark 4 (`160 / 164`)
+- **Best single-pass correctness:** Benchmark 6 (`155 / 164`)
+- **Cheapest completed run:** Benchmark 5 (`$9.716830`)
+- **Fastest completed run:** Benchmark 5 (`3251.658s`)
 
-Benchmark 5 matched Benchmark 2 on fully correct tasks while costing less and finishing far sooner, but its direct-fix path did not convert any of its 11 routed EvalPlus failures into fully correct outputs.
+### What Benchmark 6 changes
 
-Across the four completed runs documented here:
+Benchmark 6 is important because it is not just another expensive variant. It shows that a plain `plan` + `code` flow on `claude-opus-4.6` can beat every other **non-repair** run in strict correctness.
 
-- Benchmark 4 improved fully correct tasks by `10` over Benchmark 1 and by `7` over both Benchmark 2 and Benchmark 5
-- Benchmark 5 matched Benchmark 2 on fully correct tasks while costing `$0.917283` less
-- Benchmark 5 was `$1.218056` cheaper than Benchmark 4 and `$8.225262` cheaper than Benchmark 1
-- Benchmark 5 finished `5m 14.818s` faster than Benchmark 4, `3h 29m 23.172s` faster than Benchmark 2, and `42m 5.654s` faster than Benchmark 1
+But it also shows a poor efficiency tradeoff relative to the GPT-based alternatives:
+
+- vs Benchmark 1: `+5` fully correct tasks, `8m 11.708s` faster, but `$23.002576` more expensive
+- vs Benchmark 2: `+2` fully correct tasks, `2h 55m 29.226s` faster, but `$30.310555` more expensive
+- vs Benchmark 4: `-5` fully correct tasks, `28m 39.128s` slower, and `$30.009782` more expensive
+- vs Benchmark 5: `+2` fully correct tasks, `33m 53.946s` slower, and `$31.227838` more expensive
+
+### Bottom line
+
+- If the goal is the **strongest final result**, Benchmark 4 remains the best benchmark in the repo.
+- If the goal is the **best no-repair baseline**, Benchmark 6 is now the benchmark to beat.
+- If the goal is the **best efficiency tradeoff**, Benchmark 5 remains the clear winner.
 
 ## Method Notes
 
-- Both original scenarios completed all `164` HumanEval tasks.
-- Benchmarks 4 and 5 also completed all `164` HumanEval tasks, each with `11` EvalPlus-gated repair/direct-fix attempts under a `2`-worker configuration on `muntz`.
-- Correctness in this report comes from EvalPlus outputs generated from each scenario's `samples.jsonl`.
+- Every completed benchmark in this report used the full `164`-task HumanEval+ suite.
+- Correctness comes from EvalPlus outputs generated from each scenario's `samples.jsonl`.
+- The harness uses fresh Copilot sessions by default and carries context between stages through prompt artifacts rather than `--resume`.
+- Token usage is extracted from GitHub Copilot CLI logs produced during the actual run.
 - The raw scenario artifacts remain on the remote hosts under:
   - `~/mini-benchmark/runs/humaneval-b1-b2-20260319-1629/gpt-5.4-plan-code`
   - `~/mini-benchmark/runs/humaneval-b1-b2-20260319-1629/gpt-5.4-plan-gpt-5.4-mini-code`
   - `~/mini-benchmark/runs/humaneval-b4-20260321-1346/gpt-5.4-plan-gpt-5.4-mini-code-eval-repair`
   - `~/mini-benchmark/runs/humaneval-b5-20260323-1814/gpt-5.4-plan-gpt-5.4-mini-code-eval-direct-fix`
-- The repo-side EvalPlus integration has now been updated to match the installed EvalPlus output convention.
+  - `~/mini-benchmark/runs/humaneval-b6-20260324-1619/claude-opus-4.6-plan-code`
+- The repo-side EvalPlus integration has been updated to match the installed EvalPlus output convention.
