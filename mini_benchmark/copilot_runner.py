@@ -130,6 +130,7 @@ def run_copilot_prompt(
         )
 
     final_text = ""
+    latest_assistant_message = ""
     session_id = None
     session_duration_ms = None
     events = []
@@ -144,12 +145,18 @@ def run_copilot_prompt(
         events.append(event)
         if event.get("type") == "assistant.message":
             data = event.get("data", {})
-            if data.get("phase") == "final_answer":
-                final_text = data.get("content", final_text)
+            content = data.get("content")
+            if isinstance(content, str) and content:
+                latest_assistant_message = content
+                if data.get("phase") == "final_answer":
+                    final_text = content
         elif event.get("type") == "result":
             session_id = event.get("sessionId")
             usage = event.get("usage", {})
             session_duration_ms = usage.get("sessionDurationMs")
+
+    if not final_text and latest_assistant_message:
+        final_text = latest_assistant_message
 
     usage_by_model = parse_log_dir(log_dir)
     selected_usage = usage_by_model.get(model)
