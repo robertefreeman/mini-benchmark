@@ -4,8 +4,9 @@ Run IDs:
 
 - `humaneval-b1-b2-20260319-1629`
 - `humaneval-b4-20260321-1346`
+- `humaneval-b5-20260323-1814`
 
-Date range: `2026-03-19` to `2026-03-21`
+Date range: `2026-03-19` to `2026-03-23`
 
 ## Scenarios
 
@@ -36,37 +37,57 @@ Date range: `2026-03-19` to `2026-03-21`
   - `fix`: `gpt-5.4-mini` at `high`
 - Parallel workers used: `2`
 
+### Benchmark 5
+
+- Scenario ID: `gpt-5.4-plan-gpt-5.4-mini-code-eval-direct-fix`
+- Server: `muntz`
+- Stages:
+  - `plan`: `gpt-5.4` at `medium`
+  - `code`: `gpt-5.4-mini` at `medium`
+  - `fix`: `gpt-5.4` at `high`
+- Parallel workers used: `2`
+
 ## Executive Summary
 
-Benchmark 4 was the strongest overall result among the completed runs in this report.
+Benchmark 4 remained the strongest correctness result among the completed runs in this report, while Benchmark 5 became the cheapest and fastest completed full-benchmark run.
 
-Its initial pass matched Benchmark 2 on fully correct tasks, and its EvalPlus-gated repair flow lifted final correctness to the best score in the set while keeping cost close to Benchmark 2 and finishing much faster than either earlier run.
+Benchmark 5 matched Benchmark 2 and Benchmark 4's initial pass on fully correct tasks, but its EvalPlus-gated direct-fix stage produced no correctness lift. That left Benchmark 4 as the clear accuracy winner, while Benchmark 5 took the efficiency lead on both cost and wall-clock runtime.
 
 - Correctness:
   - Benchmark 1 HumanEval+: `150 / 164` = `91.4634%`
   - Benchmark 2 HumanEval+: `153 / 164` = `93.2927%`
   - Benchmark 4 initial HumanEval+: `153 / 164` = `93.2927%`
   - Benchmark 4 final HumanEval+: `160 / 164` = `97.5610%`
+  - Benchmark 5 initial HumanEval+: `153 / 164` = `93.2927%`
+  - Benchmark 5 final HumanEval+: `153 / 164` = `93.2927%`
 - Cost:
   - Benchmark 1: `$17.942092`
   - Benchmark 2: `$10.634113`
   - Benchmark 4: `$10.934886`
+  - Benchmark 5: `$9.716830`
 - Wall-clock runtime:
   - Benchmark 1: `5777.312s` = `1h 36m 17s`
   - Benchmark 2: `15814.830s` = `4h 23m 35s`
   - Benchmark 4: `3566.476s` = `59m 26s`
+  - Benchmark 5: `3251.658s` = `54m 12s`
 
-Relative to Benchmark 2, Benchmark 4 was:
+Relative to Benchmark 4, Benchmark 5 was:
 
-- `7` more fully correct tasks after repair
-- `$0.300773` more expensive (`2.8284%`)
-- `3h 24m 8.354s` faster (`77.4485%` shorter)
+- `7` fewer fully correct tasks
+- `$1.218056` cheaper (`11.1392%`)
+- `5m 14.818s` faster (`8.8271%` shorter)
 
-Relative to Benchmark 1, Benchmark 4 was:
+Relative to Benchmark 2, Benchmark 5 was:
 
-- `10` more fully correct tasks
-- `$7.007206` cheaper (`39.0546%`)
-- `36m 50.836s` faster (`38.2676%` shorter)
+- the same fully correct task count
+- `$0.917283` cheaper (`8.6259%`)
+- `3h 29m 23.172s` faster (`79.4392%` shorter)
+
+Relative to Benchmark 1, Benchmark 5 was:
+
+- `3` more fully correct tasks
+- `$8.225262` cheaper (`45.8434%`)
+- `42m 5.654s` faster (`43.7168%` shorter)
 
 ## Correctness
 
@@ -79,12 +100,12 @@ HumanEval+ is the stricter metric and is the better indicator of robustness.
 
 ### Results
 
-| Metric | Benchmark 1 | Benchmark 2 | Benchmark 4 |
-| --- | ---: | ---: | ---: |
-| Tasks | 164 | 164 | 164 |
-| Base pass@1 | 97.6% | 98.8% | 98.8% |
-| HumanEval+ pass@1 | 91.5% | 93.3% | 98.2% |
-| Fully correct tasks (`base` + `plus`) | 150 | 153 | 160 |
+| Metric | Benchmark 1 | Benchmark 2 | Benchmark 4 | Benchmark 5 |
+| --- | ---: | ---: | ---: | ---: |
+| Tasks | 164 | 164 | 164 | 164 |
+| Base pass@1 | 97.6% | 98.8% | 98.8% | 97.6% |
+| HumanEval+ pass@1 | 91.5% | 93.3% | 97.6% | 93.3% |
+| Fully correct tasks (`base` + `plus`) | 150 | 153 | 160 | 153 |
 
 ### Benchmark 4 repair lift
 
@@ -115,6 +136,36 @@ HumanEval+ is the stricter metric and is the better indicator of robustness.
   - `HumanEval/99`
   - `HumanEval/116`
 
+### Benchmark 5 direct-fix outcome
+
+- Initial fully correct tasks before direct fix: `153 / 164` = `93.2927%`
+- Direct fix attempted on `11` tasks:
+  - `HumanEval/32`
+  - `HumanEval/39`
+  - `HumanEval/89`
+  - `HumanEval/91`
+  - `HumanEval/93`
+  - `HumanEval/99`
+  - `HumanEval/116`
+  - `HumanEval/132`
+  - `HumanEval/141`
+  - `HumanEval/145`
+  - `HumanEval/151`
+- Improved by direct fix: `0` tasks
+- Still failing after direct fix:
+  - `HumanEval/32`
+  - `HumanEval/39`
+  - `HumanEval/89`
+  - `HumanEval/91`
+  - `HumanEval/93`
+  - `HumanEval/99`
+  - `HumanEval/116`
+  - `HumanEval/132`
+  - `HumanEval/141`
+  - `HumanEval/145`
+  - `HumanEval/151`
+- No tasks regressed under direct fix.
+
 ## Token Usage
 
 Pricing source: `config/pricing.openai.json`
@@ -138,6 +189,13 @@ Pricing source: `config/pricing.openai.json`
 | --- | ---: | ---: | ---: | ---: |
 | `gpt-5.4` | 3,083,724 | 1,450,368 | 77,285 | 175 |
 | `gpt-5.4-mini` | 5,285,182 | 3,541,504 | 146,938 | 279 |
+
+### Benchmark 5 token totals
+
+| Model | Input | Cached input read | Output | Requests |
+| --- | ---: | ---: | ---: | ---: |
+| `gpt-5.4` | 2,882,895 | 1,423,488 | 50,331 | 164 |
+| `gpt-5.4-mini` | 4,554,416 | 2,743,808 | 95,778 | 248 |
 
 ## Cost
 
@@ -189,6 +247,20 @@ Rates used:
 | `gpt-5.4-mini` subtotal | `$1.703709` |
 | **Total** | **`$10.934886`** |
 
+### Benchmark 5 cost
+
+| Component | Amount |
+| --- | ---: |
+| `gpt-5.4` input cost | `$7.207238` |
+| `gpt-5.4` cached input cost | `$0.355872` |
+| `gpt-5.4` output cost | `$0.754965` |
+| `gpt-5.4` subtotal | `$8.318075` |
+| `gpt-5.4-mini` input cost | `$1.138604` |
+| `gpt-5.4-mini` cached input cost | `$0.068595` |
+| `gpt-5.4-mini` output cost | `$0.191556` |
+| `gpt-5.4-mini` subtotal | `$1.398755` |
+| **Total** | **`$9.716830`** |
+
 ## Runtime
 
 The original harness run did not produce final local summaries because two separate issues got in the way:
@@ -203,13 +275,13 @@ Because of that, wall-clock runtime for Benchmarks 1 and 2 is reconstructed from
 
 These reconstructed runtimes are still good end-to-end estimates for scenario duration.
 
-Benchmark 4 completed after the auth-persistence and EvalPlus-flow fixes, so its runtime below comes directly from the final `summary.json`.
+Benchmarks 4 and 5 completed after the auth-persistence and EvalPlus-flow fixes, so their runtimes below come directly from the final `summary.json` artifacts.
 
-| Metric | Benchmark 1 | Benchmark 2 | Benchmark 4 |
-| --- | ---: | ---: | ---: |
-| Wall-clock runtime (seconds) | 5777.312 | 15814.830 | 3566.476 |
-| Wall-clock runtime | 1h 36m 17s | 4h 23m 35s | 59m 26s |
-| Runtime source | reconstructed | reconstructed | direct from `summary.json` |
+| Metric | Benchmark 1 | Benchmark 2 | Benchmark 4 | Benchmark 5 |
+| --- | ---: | ---: | ---: | ---: |
+| Wall-clock runtime (seconds) | 5777.312 | 15814.830 | 3566.476 | 3251.658 |
+| Wall-clock runtime | 1h 36m 17s | 4h 23m 35s | 59m 26s | 54m 12s |
+| Runtime source | reconstructed | reconstructed | direct from `summary.json` | direct from `summary.json` |
 
 ### Benchmark 2 runtime without the HumanEval/32 outlier
 
@@ -289,27 +361,27 @@ So Benchmark 2 was not just slower because of model selection and reasoning effo
 
 ## Interpretation
 
-If the goal is strongest combined outcome among the completed runs, Benchmark 4 won.
+If the goal is strongest correctness on the completed runs, Benchmark 4 won.
 
-Benchmark 2 still had the lowest cost by a small margin, but Benchmark 4 closed that gap to about `$0.30` while delivering much better final correctness and a dramatically shorter runtime.
+If the goal is cheapest or fastest completed full-benchmark run, Benchmark 5 won.
 
-If the goal is fastest wall-clock completion among the completed full-benchmark runs in the repo, Benchmark 4 also won.
+Benchmark 5 matched Benchmark 2 on fully correct tasks while costing less and finishing far sooner, but its direct-fix path did not convert any of its 11 routed EvalPlus failures into fully correct outputs.
 
-Across the three completed runs documented here:
+Across the four completed runs documented here:
 
-- Benchmark 4 improved fully correct tasks by `10` over Benchmark 1 and by `7` over Benchmark 2
-- Benchmark 4 was `$7.007206` cheaper than Benchmark 1
-- Benchmark 4 was only `$0.300773` more expensive than Benchmark 2
-- Benchmark 4 finished `36m 50.836s` faster than Benchmark 1
-- Benchmark 4 finished `3h 24m 8.354s` faster than Benchmark 2
+- Benchmark 4 improved fully correct tasks by `10` over Benchmark 1 and by `7` over both Benchmark 2 and Benchmark 5
+- Benchmark 5 matched Benchmark 2 on fully correct tasks while costing `$0.917283` less
+- Benchmark 5 was `$1.218056` cheaper than Benchmark 4 and `$8.225262` cheaper than Benchmark 1
+- Benchmark 5 finished `5m 14.818s` faster than Benchmark 4, `3h 29m 23.172s` faster than Benchmark 2, and `42m 5.654s` faster than Benchmark 1
 
 ## Method Notes
 
 - Both original scenarios completed all `164` HumanEval tasks.
-- Benchmark 4 also completed all `164` HumanEval tasks, with `11` EvalPlus-gated repair attempts under a `2`-worker configuration on `muntz`.
+- Benchmarks 4 and 5 also completed all `164` HumanEval tasks, each with `11` EvalPlus-gated repair/direct-fix attempts under a `2`-worker configuration on `muntz`.
 - Correctness in this report comes from EvalPlus outputs generated from each scenario's `samples.jsonl`.
 - The raw scenario artifacts remain on the remote hosts under:
   - `~/mini-benchmark/runs/humaneval-b1-b2-20260319-1629/gpt-5.4-plan-code`
   - `~/mini-benchmark/runs/humaneval-b1-b2-20260319-1629/gpt-5.4-plan-gpt-5.4-mini-code`
   - `~/mini-benchmark/runs/humaneval-b4-20260321-1346/gpt-5.4-plan-gpt-5.4-mini-code-eval-repair`
+  - `~/mini-benchmark/runs/humaneval-b5-20260323-1814/gpt-5.4-plan-gpt-5.4-mini-code-eval-direct-fix`
 - The repo-side EvalPlus integration has now been updated to match the installed EvalPlus output convention.

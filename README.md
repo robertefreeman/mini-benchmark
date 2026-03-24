@@ -1,6 +1,6 @@
 # mini-benchmark
 
-This repository tracks a benchmark comparing four ways of solving the full HumanEval+ suite with GitHub Copilot CLI.
+This repository tracks a benchmark comparing five ways of solving the full HumanEval+ suite with GitHub Copilot CLI.
 
 ## Scenarios
 
@@ -8,6 +8,7 @@ This repository tracks a benchmark comparing four ways of solving the full Human
 2. **`gpt-5.4-plan-gpt-5.4-mini-code`**: `gpt-5.4` plans at `--reasoning-effort high`, then `gpt-5.4-mini` codes at `--reasoning-effort xhigh` on `griswold`.
 3. **`gpt-5.4-plan-gpt-5.4-mini-code-review-fix`**: the same mini-track flow on `griswold`, plus `gpt-5.4` review at `--reasoning-effort high` and a conditional `gpt-5.4-mini` fix at `--reasoning-effort xhigh`.
 4. **`gpt-5.4-plan-gpt-5.4-mini-code-eval-repair`**: `gpt-5.4` plans at `--reasoning-effort medium`, `gpt-5.4-mini` codes at `--reasoning-effort medium`, then only EvalPlus failures are sent through a `gpt-5.4` high repair-plan step and a `gpt-5.4-mini` high fix step on `muntz` with 2 concurrent workers.
+5. **`gpt-5.4-plan-gpt-5.4-mini-code-eval-direct-fix`**: `gpt-5.4` plans at `--reasoning-effort medium`, `gpt-5.4-mini` codes at `--reasoning-effort medium`, then only EvalPlus failures are sent directly to a `gpt-5.4` high fix step on `muntz` with 2 concurrent workers.
 
 ## What we will measure
 
@@ -31,6 +32,7 @@ This repository tracks a benchmark comparing four ways of solving the full Human
 - Run the scenarios on these servers:
   - `muntz`: `gpt-5.4-plan-code`
   - `muntz`: `gpt-5.4-plan-gpt-5.4-mini-code-eval-repair`
+  - `muntz`: `gpt-5.4-plan-gpt-5.4-mini-code-eval-direct-fix`
   - `griswold`: both existing mini-track scenarios
 - Keep the runs aligned on the same default GitHub Copilot harness and tool surface.
 - Prefer only the MCP servers and tools that are preloaded in the default GitHub Copilot CLI environment.
@@ -56,7 +58,7 @@ This repository will store:
 
 ## Harness layout
 
-- `config/benchmark.json`: benchmark pinning, four scenario definitions, per-stage reasoning budgets, session strategy, and the parallelism cap
+- `config/benchmark.json`: benchmark pinning, five scenario definitions, per-stage reasoning budgets, session strategy, and the parallelism cap
 - `config/pricing.openai.json`: explicit token pricing used for cost calculations
 - `prompts/`: prompt templates for planning, coding, pass/fail review, repair planning, and fixing
 - `mini_benchmark/`: Python harness for local execution, telemetry parsing, pricing, and remote orchestration
@@ -98,7 +100,8 @@ Launch multiple selected scenarios together:
 python -m mini_benchmark launch-remote --run-id humaneval-full-001 \
   --scenario-id gpt-5.4-plan-gpt-5.4-mini-code \
   --scenario-id gpt-5.4-plan-gpt-5.4-mini-code-review-fix \
-  --scenario-id gpt-5.4-plan-gpt-5.4-mini-code-eval-repair
+  --scenario-id gpt-5.4-plan-gpt-5.4-mini-code-eval-repair \
+  --scenario-id gpt-5.4-plan-gpt-5.4-mini-code-eval-direct-fix
 ```
 
 If you omit `--scenario-id`, the harness targets all configured scenarios.

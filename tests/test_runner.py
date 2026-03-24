@@ -249,6 +249,22 @@ class RunnerTests(unittest.TestCase):
             self.assertEqual(summary["eval_skipped_reason"], "limited_run")
             self.assertNotIn("eval_results_path", summary["artifacts"])
 
+    def test_build_stage_prompt_supports_direct_eval_fix(self) -> None:
+        prompt = runner._build_stage_prompt(
+            stage=StageConfig("fix", "gpt-5.4", "high", "direct_repair_fixer.txt"),
+            problem={"task_id": "HumanEval/0", "prompt": "def f(): pass"},
+            stage_outputs={
+                "plan": {"algorithm": "a", "edge_cases": [], "pitfalls": []},
+                "code": {"solution": "def f():\n    pass\n", "notes": "ok"},
+                "eval_failure": {"base_status": "pass", "plus_status": "fail"},
+            },
+        )
+        self.assertIn("Evaluation signal:", prompt)
+        self.assertIn("Current candidate solution:", prompt)
+        self.assertIn("def f():\n    pass\n", prompt)
+        self.assertNotIn("Repair plan:", prompt)
+        self.assertNotIn("Review:", prompt)
+
 
 if __name__ == "__main__":
     unittest.main()

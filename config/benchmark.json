@@ -147,6 +147,37 @@
           "prompt_template": "repair_fixer.txt"
         }
       ]
+    },
+    {
+      "id": "gpt-5.4-plan-gpt-5.4-mini-code-eval-direct-fix",
+      "display_name": "GPT-5.4 medium plan + GPT-5.4-mini medium code + EvalPlus direct GPT-5.4 fix",
+      "server": "muntz",
+      "submission_stage": "fix",
+      "session_strategy": "fresh",
+      "parallel_workers": 2,
+      "eval_repair_stage_names": [
+        "fix"
+      ],
+      "stages": [
+        {
+          "name": "plan",
+          "model": "gpt-5.4",
+          "reasoning_effort": "medium",
+          "prompt_template": "planner.txt"
+        },
+        {
+          "name": "code",
+          "model": "gpt-5.4-mini",
+          "reasoning_effort": "medium",
+          "prompt_template": "coder.txt"
+        },
+        {
+          "name": "fix",
+          "model": "gpt-5.4",
+          "reasoning_effort": "high",
+          "prompt_template": "direct_repair_fixer.txt"
+        }
+      ]
     }
   ]
 }

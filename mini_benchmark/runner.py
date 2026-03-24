@@ -186,6 +186,15 @@ def _build_stage_prompt(
             eval_failure_json=stage_outputs["eval_failure"],
             candidate_solution=stage_outputs["code"]["solution"],
         )
+    if stage.name == "fix" and "eval_failure" in stage_outputs:
+        return render_prompt(
+            stage.prompt_template,
+            task_id=problem["task_id"],
+            prompt=problem["prompt"],
+            plan_json=stage_outputs["plan"],
+            eval_failure_json=stage_outputs["eval_failure"],
+            candidate_solution=stage_outputs["code"]["solution"],
+        )
     if stage.name == "fix":
         return render_prompt(
             stage.prompt_template,
